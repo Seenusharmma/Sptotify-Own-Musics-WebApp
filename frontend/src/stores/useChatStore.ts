@@ -3,13 +3,32 @@ import { Message, User } from "@/types";
 import { create } from "zustand";
 // import { io } from "socket.io-client";
 // const socket = io(baseURL, { ... });
-const socket = {
+interface ChatStore {
+	users: User[];
+	isLoading: boolean;
+	error: string | null;
+	socket: any;
+	isConnected: boolean;
+	onlineUsers: Set<string>;
+	userActivities: Map<string, string>;
+	messages: Message[];
+	selectedUser: User | null;
+
+	fetchUsers: () => Promise<void>;
+	initSocket: (userId: string) => void;
+	disconnectSocket: () => void;
+	sendMessage: (receiverId: string, senderId: string, content: string) => void;
+	fetchMessages: (userId: string) => Promise<void>;
+	setSelectedUser: (user: User | null) => void;
+}
+
+const socket: any = {
 	auth: {},
 	connect: () => { },
 	disconnect: () => { },
-	emit: () => { },
-	on: () => { },
-	off: () => { },
+	emit: (_event: string, ..._args: any[]) => { },
+	on: (_event: string, _callback: (...args: any[]) => void) => { },
+	off: (_event: string, _callback: (...args: any[]) => void) => { },
 };
 
 export const useChatStore = create<ChatStore>((set, get) => ({
@@ -23,7 +42,7 @@ export const useChatStore = create<ChatStore>((set, get) => ({
 	messages: [],
 	selectedUser: null,
 
-	setSelectedUser: (user) => set({ selectedUser: user }),
+	setSelectedUser: (user: User | null) => set({ selectedUser: user }),
 
 	fetchUsers: async () => {
 		set({ isLoading: true, error: null });
@@ -37,7 +56,7 @@ export const useChatStore = create<ChatStore>((set, get) => ({
 		}
 	},
 
-	initSocket: (userId) => {
+	initSocket: (userId: string) => {
 		if (!get().isConnected) {
 			socket.auth = { userId };
 			socket.connect();
@@ -53,13 +72,13 @@ export const useChatStore = create<ChatStore>((set, get) => ({
 			});
 
 			socket.on("user_connected", (userId: string) => {
-				set((state) => ({
+				set((state: ChatStore) => ({
 					onlineUsers: new Set([...state.onlineUsers, userId]),
 				}));
 			});
 
 			socket.on("user_disconnected", (userId: string) => {
-				set((state) => {
+				set((state: ChatStore) => {
 					const newOnlineUsers = new Set(state.onlineUsers);
 					newOnlineUsers.delete(userId);
 					return { onlineUsers: newOnlineUsers };
@@ -67,19 +86,19 @@ export const useChatStore = create<ChatStore>((set, get) => ({
 			});
 
 			socket.on("receive_message", (message: Message) => {
-				set((state) => ({
+				set((state: ChatStore) => ({
 					messages: [...state.messages, message],
 				}));
 			});
 
 			socket.on("message_sent", (message: Message) => {
-				set((state) => ({
+				set((state: ChatStore) => ({
 					messages: [...state.messages, message],
 				}));
 			});
 
-			socket.on("activity_updated", ({ userId, activity }) => {
-				set((state) => {
+			socket.on("activity_updated", ({ userId, activity }: { userId: string; activity: string }) => {
+				set((state: ChatStore) => {
 					const newActivities = new Map(state.userActivities);
 					newActivities.set(userId, activity);
 					return { userActivities: newActivities };
@@ -97,7 +116,7 @@ export const useChatStore = create<ChatStore>((set, get) => ({
 		}
 	},
 
-	sendMessage: async (receiverId, senderId, content) => {
+	sendMessage: async (receiverId: string, senderId: string, content: string) => {
 		const socket = get().socket;
 		if (!socket) return;
 
