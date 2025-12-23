@@ -7,146 +7,142 @@ import { useEffect } from "react";
 import { useParams } from "react-router-dom";
 
 export const formatDuration = (seconds: number) => {
-	const minutes = Math.floor(seconds / 60);
-	const remainingSeconds = seconds % 60;
-	return `${minutes}:${remainingSeconds.toString().padStart(2, "0")}`;
+  const minutes = Math.floor(seconds / 60);
+  const remainingSeconds = seconds % 60;
+  return `${minutes}:${remainingSeconds.toString().padStart(2, "0")}`;
 };
 
 const AlbumPage = () => {
-	const { albumId } = useParams();
-	const { fetchAlbumById, currentAlbum, isLoading } = useMusicStore();
-	const { currentSong, isPlaying, playAlbum, togglePlay } = usePlayerStore();
+  const { albumId } = useParams();
+  const { fetchAlbumById, currentAlbum, isLoading } = useMusicStore();
+  const { currentSong, isPlaying, playAlbum, togglePlay } = usePlayerStore();
 
-	useEffect(() => {
-		if (albumId) fetchAlbumById(albumId);
-	}, [fetchAlbumById, albumId]);
+  useEffect(() => {
+    if (albumId) fetchAlbumById(albumId);
+  }, [fetchAlbumById, albumId]);
 
-	if (isLoading) return null;
+  if (isLoading || !currentAlbum) return null;
 
-	const handlePlayAlbum = () => {
-		if (!currentAlbum) return;
+  const isAlbumPlaying =
+    Array.isArray(currentAlbum.songs) &&
+    currentAlbum.songs.some((s) => s._id === currentSong?._id);
 
-		const isCurrentAlbumPlaying = Array.isArray(currentAlbum?.songs) && currentAlbum.songs.some((song) => song._id === currentSong?._id);
-		if (isCurrentAlbumPlaying) togglePlay();
-		else {
-			// start playing the album from the beginning
-			playAlbum(currentAlbum?.songs, 0);
-		}
-	};
+  return (
+    <div className="h-full">
+      <ScrollArea className="h-full">
+        <div className="relative min-h-full">
+          {/* Background */}
+          <div className="absolute inset-0 bg-gradient-to-b from-[#5038a0]/70 via-zinc-900 to-zinc-900" />
 
-	const handlePlaySong = (index: number) => {
-		if (!currentAlbum) return;
+          <div className="relative z-10 px-4 sm:px-6 pb-10">
+            {/* HEADER */}
+            <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 pt-6">
+              <img
+                src={currentAlbum.imageUrl}
+                alt={currentAlbum.title}
+                className="w-40 h-40 sm:w-56 sm:h-56 rounded-lg shadow-xl mx-auto sm:mx-0"
+              />
 
-		playAlbum(currentAlbum?.songs, index);
-	};
+              <div className="flex flex-col justify-end text-center sm:text-left">
+                <p className="text-xs uppercase text-zinc-400">Album</p>
 
-	return (
-		<div className='h-full'>
-			<ScrollArea className='h-full rounded-md'>
-				{/* Main Content */}
-				<div className='relative min-h-full'>
-					{/* bg gradient */}
-					<div
-						className='absolute inset-0 bg-gradient-to-b from-[#5038a0]/80 via-zinc-900/80
-					 to-zinc-900 pointer-events-none'
-						aria-hidden='true'
-					/>
+                <h1 className="text-2xl sm:text-4xl font-bold text-white mt-1">
+                  {currentAlbum.title}
+                </h1>
 
-					{/* Content */}
-					<div className='relative z-10'>
-						<div className='flex p-6 gap-6 pb-8'>
-							<img
-								src={currentAlbum?.imageUrl}
-								alt={currentAlbum?.title}
-								className='w-[240px] h-[240px] shadow-xl rounded'
-							/>
-							<div className='flex flex-col justify-end'>
-								<p className='text-sm font-medium'>Album</p>
-								<h1 className='text-7xl font-bold my-4'>{currentAlbum?.title}</h1>
-								<div className='flex items-center gap-2 text-sm text-zinc-100'>
-									<span className='font-medium text-white'>{currentAlbum?.artist}</span>
-									<span>• {Array.isArray(currentAlbum?.songs) ? currentAlbum.songs.length : 0} songs</span>
-									<span>• {currentAlbum?.releaseYear}</span>
-								</div>
-							</div>
-						</div>
+                <div className="mt-2 text-xs sm:text-sm text-zinc-300 space-y-1 sm:space-y-0 sm:flex sm:items-center sm:gap-2">
+                  <span className="font-medium text-white">
+                    {currentAlbum.artist}
+                  </span>
+                  <span className="hidden sm:inline">•</span>
+                  <span>{currentAlbum.songs.length} songs</span>
+                  <span className="hidden sm:inline">•</span>
+                  <span>{currentAlbum.releaseYear}</span>
+                </div>
+              </div>
+            </div>
 
-						{/* play button */}
-						<div className='px-6 pb-4 flex items-center gap-6'>
-							<Button
-								onClick={handlePlayAlbum}
-								size='icon'
-								className='w-14 h-14 rounded-full bg-green-500 hover:bg-green-400 
-                hover:scale-105 transition-all'
-							>
-								{isPlaying && Array.isArray(currentAlbum?.songs) && currentAlbum.songs.some((song) => song._id === currentSong?._id) ? (
-									<Pause className='h-7 w-7 text-black' />
-								) : (
-									<Play className='h-7 w-7 text-black' />
-								)}
-							</Button>
-						</div>
+            {/* PLAY BUTTON */}
+            <div className="mt-5 flex justify-center sm:justify-start">
+              <Button
+                onClick={() =>
+                  isAlbumPlaying ? togglePlay() : playAlbum(currentAlbum.songs, 0)
+                }
+                size="icon"
+                className="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-green-500 hover:bg-green-400"
+              >
+                {isAlbumPlaying && isPlaying ? (
+                  <Pause className="h-6 w-6 text-black" />
+                ) : (
+                  <Play className="h-6 w-6 text-black" />
+                )}
+              </Button>
+            </div>
 
-						{/* Table Section */}
-						<div className='bg-black/20 backdrop-blur-sm'>
-							{/* table header */}
-							<div
-								className='grid grid-cols-[16px_4fr_2fr_1fr] gap-4 px-10 py-2 text-sm 
-            text-zinc-400 border-b border-white/5'
-							>
-								<div>#</div>
-								<div>Title</div>
-								<div>Released Date</div>
-								<div>
-									<Clock className='h-4 w-4' />
-								</div>
-							</div>
+            {/* SONG LIST */}
+            <div className="mt-6 bg-black/20 backdrop-blur-sm rounded-lg">
+              {/* HEADER (HIDDEN ON MOBILE) */}
+              <div className="hidden sm:grid grid-cols-[24px_4fr_2fr_1fr] px-6 py-2 text-xs text-zinc-400 border-b border-white/10">
+                <div>#</div>
+                <div>Title</div>
+                <div>Release</div>
+                <div>
+                  <Clock className="h-4 w-4" />
+                </div>
+              </div>
 
-							{/* songs list */}
+              {/* SONG ROWS */}
+              <div className="divide-y divide-white/5">
+                {currentAlbum.songs.map((song, index) => {
+                  const isCurrent = song._id === currentSong?._id;
 
-							<div className='px-6'>
-								<div className='space-y-2 py-4'>
-									{(Array.isArray(currentAlbum?.songs) ? currentAlbum.songs : []).map((song, index) => {
-										const isCurrentSong = currentSong?._id === song._id;
-										return (
-											<div
-												key={song._id}
-												onClick={() => handlePlaySong(index)}
-												className={`grid grid-cols-[16px_4fr_2fr_1fr] gap-4 px-4 py-2 text-sm 
-                      text-zinc-400 hover:bg-white/5 rounded-md group cursor-pointer
-                      `}
-											>
-												<div className='flex items-center justify-center'>
-													{isCurrentSong && isPlaying ? (
-														<div className='size-4 text-green-500'>♫</div>
-													) : (
-														<span className='group-hover:hidden'>{index + 1}</span>
-													)}
-													{!isCurrentSong && (
-														<Play className='h-4 w-4 hidden group-hover:block' />
-													)}
-												</div>
+                  return (
+                    <div
+                      key={song._id}
+                      onClick={() => playAlbum(currentAlbum.songs, index)}
+                      className="flex sm:grid sm:grid-cols-[24px_4fr_2fr_1fr] items-center gap-3 px-4 py-3 text-xs sm:text-sm hover:bg-white/5 cursor-pointer"
+                    >
+                      {/* INDEX / PLAY */}
+                      <div className="hidden sm:flex justify-center text-zinc-400">
+                        {isCurrent && isPlaying ? "♫" : index + 1}
+                      </div>
 
-												<div className='flex items-center gap-3'>
-													<img src={song.imageUrl} alt={song.title} className='size-10' />
+                      {/* TITLE */}
+                      <div className="flex items-center gap-3 flex-1">
+                        <img
+                          src={song.imageUrl}
+                          alt={song.title}
+                          className="w-10 h-10 rounded"
+                        />
+                        <div>
+                          <p className="font-medium text-white leading-tight">
+                            {song.title}
+                          </p>
+                          <p className="text-zinc-400 text-xs">
+                            {song.artist}
+                          </p>
+                        </div>
+                      </div>
 
-													<div>
-														<div className={`font-medium text-white`}>{song.title}</div>
-														<div>{song.artist}</div>
-													</div>
-												</div>
-												<div className='flex items-center'>{song.createdAt.split("T")[0]}</div>
-												<div className='flex items-center'>{formatDuration(song.duration)}</div>
-											</div>
-										);
-									})}
-								</div>
-							</div>
-						</div>
-					</div>
-				</div>
-			</ScrollArea>
-		</div>
-	);
+                      {/* RELEASE (HIDDEN MOBILE) */}
+                      <div className="hidden sm:block text-zinc-400">
+                        {song.createdAt.split("T")[0]}
+                      </div>
+
+                      {/* DURATION */}
+                      <div className="text-zinc-400 ml-auto sm:ml-0">
+                        {formatDuration(song.duration)}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        </div>
+      </ScrollArea>
+    </div>
+  );
 };
+
 export default AlbumPage;

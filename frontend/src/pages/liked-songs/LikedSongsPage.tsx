@@ -1,145 +1,118 @@
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useMusicStore } from "@/stores/useMusicStore";
 import { usePlayerStore } from "@/stores/usePlayerStore";
-import { Clock, Play, Pause, Trash2 } from "lucide-react";
+import { Play, Pause, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { formatDuration } from "../album/AlbumPage";
 
 const LikedSongsPage = () => {
-	const { likedSongs, toggleLike } = useMusicStore();
-	const { currentSong, isPlaying, playAlbum, togglePlay } = usePlayerStore();
+  const { likedSongs, toggleLike } = useMusicStore();
+  const { currentSong, isPlaying, playAlbum, togglePlay } = usePlayerStore();
 
-	const handlePlayPlaylist = () => {
-		if (!likedSongs.length) return;
+  const isPlayingLiked = likedSongs.some(
+    (s) => s._id === currentSong?._id
+  );
 
-		const isLikedsPlaying = likedSongs.some((song) => song._id === currentSong?._id);
-		if (isLikedsPlaying) togglePlay();
-		else {
-			playAlbum(likedSongs, 0);
-		}
-	};
+  return (
+    <div className="h-full bg-zinc-900">
+      <ScrollArea className="h-full">
+        <div className="px-4 pb-24">
+          {/* HEADER */}
+          <div className="pt-6 pb-4">
+            <p className="text-xs text-zinc-400">Playlist</p>
+            <h1 className="text-2xl font-semibold text-white mt-1">
+              Liked Songs
+            </h1>
+            <p className="text-xs text-zinc-400 mt-1">
+              {likedSongs.length} songs
+            </p>
+          </div>
 
-	const handlePlaySong = (index: number) => {
-		playAlbum(likedSongs, index);
-	};
+          {/* PLAY BUTTON */}
+          <div className="mb-4">
+            <Button
+              onClick={() =>
+                isPlayingLiked ? togglePlay() : playAlbum(likedSongs, 0)
+              }
+              disabled={!likedSongs.length}
+              className="h-10 px-6 rounded-full bg-green-500 text-black text-sm font-medium hover:bg-green-400"
+            >
+              {isPlaying && isPlayingLiked ? (
+                <>
+                  <Pause className="w-4 h-4 mr-2" /> Pause
+                </>
+              ) : (
+                <>
+                  <Play className="w-4 h-4 mr-2" /> Play
+                </>
+              )}
+            </Button>
+          </div>
 
-	return (
-		<div className='h-full'>
-			<ScrollArea className='h-full rounded-md'>
-				{/* Main Content */}
-				<div className='relative min-h-full'>
-					{/* bg gradient */}
-					<div
-						className='absolute inset-0 bg-gradient-to-b from-indigo-800/80 via-zinc-900/80
-					 to-zinc-900 pointer-events-none'
-						aria-hidden='true'
-					/>
+          {/* SONG LIST */}
+          <div className="space-y-1">
+            {likedSongs.length === 0 && (
+              <p className="text-sm text-zinc-500 text-center mt-10">
+                No liked songs yet
+              </p>
+            )}
 
-					{/* Content */}
-					<div className='relative z-10'>
-						<div className='flex p-6 gap-6 pb-8'>
-							<div className="w-[240px] h-[240px] shadow-xl rounded bg-gradient-to-br from-indigo-700 to-indigo-900 flex items-center justify-center">
-                                <span className="text-8xl">🎵</span>
-                            </div>
-							<div className='flex flex-col justify-end'>
-								<p className='text-sm font-medium'>Playlist</p>
-								<h1 className='text-5xl sm:text-7xl font-bold my-4'>Liked Songs</h1>
-								<div className='flex items-center gap-2 text-sm text-zinc-100'>
-									<span className='font-medium text-white'>You</span>
-									<span>• {likedSongs.length} songs</span>
-								</div>
-							</div>
-						</div>
+            {likedSongs.map((song, index) => {
+              const isCurrent = song._id === currentSong?._id;
 
-						{/* play button */}
-						<div className='px-6 pb-4 flex items-center gap-6'>
-							<Button
-								onClick={handlePlayPlaylist}
-                                disabled={likedSongs.length === 0}
-								size='icon'
-								className='w-14 h-14 rounded-full bg-green-500 hover:bg-green-400 
-                hover:scale-105 transition-all text-black disabled:bg-zinc-600 disabled:opacity-50'
-							>
-								{isPlaying && likedSongs.some((song) => song._id === currentSong?._id) ? (
-									<Pause className='h-7 w-7 fill-black' />
-								) : (
-									<Play className='h-7 w-7 fill-black' />
-								)}
-							</Button>
-						</div>
+              return (
+                <div
+                  key={song._id}
+                  className="flex items-center gap-3 p-2 rounded-md hover:bg-zinc-800 transition"
+                  onClick={() => playAlbum(likedSongs, index)}
+                >
+                  {/* IMAGE */}
+                  <img
+                    src={song.imageUrl}
+                    alt={song.title}
+                    className="w-12 h-12 rounded object-cover"
+                  />
 
-						{/* Table Section */}
-						<div className='bg-black/20 backdrop-blur-sm'>
-							{/* table header */}
-							<div
-								className='grid grid-cols-[16px_4fr_2fr_1fr] gap-4 px-10 py-2 text-sm 
-            text-zinc-400 border-b border-white/5'
-							>
-								<div>#</div>
-								<div>Title</div>
-								<div>Album</div>
-								<div>
-									<Clock className='h-4 w-4' />
-								</div>
-							</div>
+                  {/* INFO */}
+                  <div className="flex-1 min-w-0">
+                    <p
+                      className={`text-sm truncate ${
+                        isCurrent ? "text-green-400" : "text-white"
+                      }`}
+                    >
+                      {song.title}
+                    </p>
+                    <p className="text-xs text-zinc-400 truncate">
+                      {song.artist}
+                    </p>
+                  </div>
 
-							{/* songs list */}
+                  {/* RIGHT ACTIONS */}
+                  <div className="flex items-center gap-3">
+                    <span className="text-xs text-zinc-400">
+                      {formatDuration(song.duration)}
+                    </span>
 
-							<div className='px-6'>
-								<div className='space-y-2 py-4'>
-                                    {likedSongs.length === 0 && (
-                                        <div className="text-center py-10 text-zinc-500">
-                                            No liked songs yet. Go add some!
-                                        </div>
-                                    )}
-									{likedSongs.map((song, index) => {
-										const isCurrentSong = currentSong?._id === song._id;
-										return (
-											<div
-												key={song._id}
-												className={`grid grid-cols-[16px_4fr_2fr_1fr] gap-4 px-4 py-2 text-sm 
-                      text-zinc-400 hover:bg-white/5 rounded-md group cursor-pointer
-                      `}
-											>
-												<div className='flex items-center justify-center' onClick={() => handlePlaySong(index)}>
-													{isCurrentSong && isPlaying ? (
-														<div className='size-4 text-green-500'>♫</div>
-													) : (
-														<span className='group-hover:hidden'>{index + 1}</span>
-													)}
-													{!isCurrentSong && (
-														<Play className='h-4 w-4 hidden group-hover:block text-white' />
-													)}
-												</div>
-
-												<div className='flex items-center gap-3' onClick={() => handlePlaySong(index)}>
-													<img src={song.imageUrl} alt={song.title} className='size-10 rounded' />
-
-													<div>
-														<div className={`font-medium ${isCurrentSong ? 'text-green-500' : 'text-white'}`}>{song.title}</div>
-														<div>{song.artist}</div>
-													</div>
-												</div>
-												<div className='flex items-center'>{song.albumId || 'Single'}</div>
-												<div className='flex items-center justify-between'>
-                                                    {formatDuration(song.duration)}
-                                                    <Button variant="ghost" size="icon" className="opacity-0 group-hover:opacity-100 text-zinc-400 hover:text-white" onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        toggleLike(song);
-                                                    }}>
-                                                        <Trash2 className="size-4" />
-                                                    </Button>
-                                                </div>
-											</div>
-										);
-									})}
-								</div>
-							</div>
-						</div>
-					</div>
-				</div>
-			</ScrollArea>
-		</div>
-	);
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="text-zinc-500 hover:text-white"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toggleLike(song);
+                      }}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </ScrollArea>
+    </div>
+  );
 };
+
 export default LikedSongsPage;

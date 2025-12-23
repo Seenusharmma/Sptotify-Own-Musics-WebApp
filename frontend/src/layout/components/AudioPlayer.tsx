@@ -1,5 +1,4 @@
 import { usePlayerStore } from "@/stores/usePlayerStore";
-import { useMusicStore } from "@/stores/useMusicStore";
 import { useEffect, useRef } from "react";
 import { idbStorage } from "@/lib/idb";
 
@@ -8,7 +7,6 @@ const AudioPlayer = () => {
 	const prevSongRef = useRef<string | null>(null);
 
 	const { currentSong, isPlaying, playNext, autoPlayNext } = usePlayerStore();
-	const { isOffline } = useMusicStore();
 
 	// handle play/pause logic
 	useEffect(() => {
@@ -36,6 +34,10 @@ const AudioPlayer = () => {
 		if (!audioRef.current || !currentSong) return;
 
 		const audio = audioRef.current;
+
+		// Skip if this is the same song that's already loaded
+		if (prevSongRef.current === currentSong._id) return;
+
 		let blobUrl: string | null = null;
 
 		const setupAudio = async () => {
@@ -54,11 +56,9 @@ const AudioPlayer = () => {
 				audio.src = currentSong.audioUrl;
 			}
 
-			// reset the playback position ONLY if the song actually changed
-			if (prevSongRef.current !== currentSong._id) {
-				audio.currentTime = 0;
-				prevSongRef.current = currentSong._id;
-			}
+			// reset the playback position when the song changes
+			audio.currentTime = 0;
+			prevSongRef.current = currentSong._id;
 
 			if (isPlaying) {
 				audio.play().catch(err => console.error("Playback failed:", err));
@@ -78,7 +78,7 @@ const AudioPlayer = () => {
 				URL.revokeObjectURL(blobUrl);
 			}
 		};
-	}, [currentSong, isPlaying, isOffline]);
+	}, [currentSong]);
 
 	return <audio ref={audioRef} />;
 };

@@ -23,6 +23,9 @@ interface MusicStore {
 	likedSongs: Song[];
 	downloadedSongs: Song[];
 	recommendations: Song[];
+	jioOriginals: Song[];
+	trendingAlbums: Album[];
+	arijitAlbums: Album[];
 	toggleLike: (song: Song) => void;
 	addDownload: (song: Song) => Promise<void>;
 	removeDownload: (songId: string) => Promise<void>;
@@ -40,6 +43,9 @@ interface MusicStore {
 	fetchPunjabiSongs: () => Promise<void>;
 	fetchHollywoodSongs: () => Promise<void>;
 	fetchFeaturedPlaylists: () => Promise<void>;
+	fetchJioOriginals: () => Promise<void>;
+	fetchTrendingAlbums: () => Promise<void>;
+	fetchArijitAlbums: () => Promise<void>;
 	fetchStats: () => Promise<void>;
 	fetchSongs: () => Promise<void>;
 	fetchRecommendations: (songId: string) => Promise<void>;
@@ -61,6 +67,9 @@ export const useMusicStore = create<MusicStore>((set, get) => ({
 	hollywoodSongs: [],
 	featuredPlaylists: [],
 	recommendations: [],
+	jioOriginals: [],
+	trendingAlbums: [],
+	arijitAlbums: [],
 	currentSongDetails: null,
 	isOffline: !navigator.onLine,
 	setIsOffline: (isOffline) => set((state) => ({
@@ -213,22 +222,24 @@ export const useMusicStore = create<MusicStore>((set, get) => ({
 		if (get().isOffline) return;
 		set({ isLoading: true, error: null });
 		try {
-			if (id.startsWith("jio-playlist-")) {
-				const actualId = id.replace("jio-playlist-", "");
-				const response = await axios.get(`https://jiosavan-api-with-playlist.vercel.app/api/playlists?id=${actualId}`);
-				const playlistData = response.data?.data;
+			if (id.startsWith("jio-playlist-") || id.startsWith("jio-album-")) {
+				const isPlaylist = id.startsWith("jio-playlist-");
+				const actualId = isPlaylist ? id.replace("jio-playlist-", "") : id.replace("jio-album-", "");
+				const endpoint = isPlaylist ? "playlists" : "albums";
+				const response = await axios.get(`https://jiosavan-api-with-playlist.vercel.app/api/${endpoint}?id=${actualId}`);
+				const data = response.data?.data;
 
-				if (!playlistData) {
-					throw new Error("Playlist not found");
+				if (!data) {
+					throw new Error(`${isPlaylist ? "Playlist" : "Album"} not found`);
 				}
 
 				const mappedAlbum: Album = {
 					_id: id,
-					title: playlistData.name,
-					artist: 'Featured Playlist',
-					imageUrl: playlistData.image?.[playlistData.image.length - 1]?.url || '',
-					releaseYear: new Date().getFullYear(),
-					songs: Array.isArray(playlistData.songs) ? playlistData.songs.map((song: any) => ({
+					title: data.name,
+					artist: isPlaylist ? 'Featured Playlist' : (Array.isArray(data.artists?.primary) ? data.artists.primary.map((a: any) => a.name).join(", ") : 'Various Artists'),
+					imageUrl: data.image?.[data.image.length - 1]?.url || '',
+					releaseYear: data.year || new Date().getFullYear(),
+					songs: Array.isArray(data.songs) ? data.songs.map((song: any) => ({
 						_id: `jio-${song.id}`,
 						title: song.name,
 						artist: Array.isArray(song.artists?.primary) ? song.artists.primary.map((a: any) => a.name).join(", ") : '',
@@ -429,6 +440,81 @@ export const useMusicStore = create<MusicStore>((set, get) => ({
 			set({ featuredPlaylists: mappedPlaylists });
 		} catch (error: any) {
 			set({ error: error.response?.data?.message || "Failed to fetch featured playlists", featuredPlaylists: [] });
+		} finally {
+			set({ isLoading: false });
+		}
+	},
+
+	fetchJioOriginals: async () => {
+		if (get().isOffline) return;
+		set({ isLoading: true, error: null });
+		try {
+			const response = await axios.get(`https://jiosavan-api-with-playlist.vercel.app/api/search/songs?query=original`);
+			const data = response.data?.data?.results;
+
+			const mappedSongs: Song[] = Array.isArray(data) ? data.map((song: any) => ({
+				_id: `jio-${song.id}`,
+				title: song.name,
+				artist: Array.isArray(song.artists?.primary) ? song.artists.primary.map((a: any) => a.name).join(", ") : '',
+				albumId: null,
+				imageUrl: song.image?.[song.image.length - 1]?.url || '',
+				audioUrl: song.downloadUrl?.[song.downloadUrl.length - 1]?.url || '',
+				duration: song.duration,
+				createdAt: new Date().toISOString(),
+				updatedAt: new Date().toISOString(),
+			})) : [];
+
+			set({ jioOriginals: mappedSongs });
+		} catch (error: any) {
+			set({ error: error.response?.data?.message || "Failed to fetch Originals", jioOriginals: [] });
+		} finally {
+			set({ isLoading: false });
+		}
+	},
+
+	fetchTrendingAlbums: async () => {
+		if (get().isOffline) return;
+		set({ isLoading: true, error: null });
+		try {
+			const response = await axios.get(`https://jiosavan-api-with-playlist.vercel.app/api/search/albums?query=trending`);
+			const data = response.data?.data?.results;
+
+			const mappedAlbums: Album[] = Array.isArray(data) ? data.map((album: any) => ({
+				_id: `jio-album-${album.id}`,
+				title: album.name,
+				artist: Array.isArray(album.artists?.primary) ? album.artists.primary.map((a: any) => a.name).join(", ") : 'Various Artists',
+				imageUrl: album.image?.[album.image.length - 1]?.url || '',
+				releaseYear: album.year || new Date().getFullYear(),
+				songs: []
+			})) : [];
+
+			set({ trendingAlbums: mappedAlbums });
+		} catch (error: any) {
+			set({ error: error.response?.data?.message || "Failed to fetch trending albums", trendingAlbums: [] });
+		} finally {
+			set({ isLoading: false });
+		}
+	},
+
+	fetchArijitAlbums: async () => {
+		if (get().isOffline) return;
+		set({ isLoading: true, error: null });
+		try {
+			const response = await axios.get(`https://jiosavan-api-with-playlist.vercel.app/api/search/albums?query=arijit singh`);
+			const data = response.data?.data?.results;
+
+			const mappedAlbums: Album[] = Array.isArray(data) ? data.map((album: any) => ({
+				_id: `jio-album-${album.id}`,
+				title: album.name,
+				artist: Array.isArray(album.artists?.primary) ? album.artists.primary.map((a: any) => a.name).join(", ") : 'Arijit Singh',
+				imageUrl: album.image?.[album.image.length - 1]?.url || '',
+				releaseYear: album.year || new Date().getFullYear(),
+				songs: []
+			})) : [];
+
+			set({ arijitAlbums: mappedAlbums });
+		} catch (error: any) {
+			set({ error: error.response?.data?.message || "Failed to fetch Arijit albums", arijitAlbums: [] });
 		} finally {
 			set({ isLoading: false });
 		}

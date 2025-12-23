@@ -5,6 +5,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import FeaturedSection from "./components/FeaturedSection";
 import HeroCarousel from "./components/HeroCarousel";
 import SectionGrid from "./components/SectionGrid";
+import AlbumGrid from "./components/AlbumGrid";
 
 import { useMusicStore } from "@/stores/useMusicStore";
 import { usePlayerStore } from "@/stores/usePlayerStore";
@@ -30,6 +31,12 @@ const HomePage = () => {
     hollywoodSongs,
     isOffline,
     downloadedSongs,
+    fetchJioOriginals,
+    fetchTrendingAlbums,
+    fetchArijitAlbums,
+    jioOriginals,
+    trendingAlbums,
+    arijitAlbums,
   } = useMusicStore();
 
   const { recentlyPlayed } = useSearchStore();
@@ -45,7 +52,10 @@ const HomePage = () => {
     fetchBollywoodSongs();
     fetchPunjabiSongs();
     fetchHollywoodSongs();
-  }, [isOffline, fetchFeaturedSongs, fetchMadeForYouSongs, fetchTrendingSongs, fetchBollywoodSongs, fetchPunjabiSongs, fetchHollywoodSongs]);
+    fetchJioOriginals();
+    fetchTrendingAlbums();
+    fetchArijitAlbums();
+  }, [isOffline, fetchFeaturedSongs, fetchMadeForYouSongs, fetchTrendingSongs, fetchBollywoodSongs, fetchPunjabiSongs, fetchHollywoodSongs, fetchJioOriginals, fetchTrendingAlbums, fetchArijitAlbums]);
 
   // Initialize queue
   useEffect(() => {
@@ -141,6 +151,24 @@ const HomePage = () => {
                 <SectionGrid
                   title='Hollywood'
                   songs={hollywoodSongs}
+                  isLoading={isLoading}
+                />
+
+                <SectionGrid
+                  title='JioSaavn Originals'
+                  songs={jioOriginals}
+                  isLoading={isLoading}
+                />
+
+                <AlbumGrid
+                  title='Trending Albums'
+                  albums={trendingAlbums}
+                  isLoading={isLoading}
+                />
+
+                <AlbumGrid
+                  title='Arijit Singh Hits'
+                  albums={arijitAlbums}
                   isLoading={isLoading}
                 />
               </div>
