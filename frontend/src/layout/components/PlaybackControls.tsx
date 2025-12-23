@@ -3,6 +3,7 @@ import { Slider } from "@/components/ui/slider";
 import { usePlayerStore } from "@/stores/usePlayerStore";
 import { Laptop2, ListMusic, Mic2, Pause, Play, Shuffle, SkipBack, SkipForward, Volume1 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { cn } from "@/lib/utils";
 
 const formatTime = (seconds: number) => {
 	const minutes = Math.floor(seconds / 60);
@@ -14,6 +15,7 @@ export const PlaybackControls = () => {
 	const { currentSong, isPlaying, togglePlay, playNext, playPrevious, autoPlayNext, toggleAutoPlay } = usePlayerStore();
 
 	const [volume, setVolume] = useState(75);
+	const [showMobileVolume, setShowMobileVolume] = useState(false);
 	const [currentTime, setCurrentTime] = useState(0);
 	const [duration, setDuration] = useState(0);
 	const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -122,6 +124,37 @@ export const PlaybackControls = () => {
 						>
 							<ListMusic className='h-4 w-4' />
 						</Button>
+
+						<div className="relative md:hidden">
+							<Button
+								size='icon'
+								variant='ghost'
+								className={cn(
+									"hover:text-white text-zinc-400 h-8 w-8",
+									showMobileVolume && "text-white bg-zinc-800"
+								)}
+								onClick={() => setShowMobileVolume(!showMobileVolume)}
+							>
+								<Volume1 className='h-4 w-4' />
+							</Button>
+
+							{showMobileVolume && (
+								<div className='absolute bottom-full right-0 mb-4 bg-zinc-800 p-3 rounded-lg shadow-xl border border-zinc-700 w-32 animate-in fade-in slide-in-from-bottom-2'>
+									<Slider
+										value={[volume]}
+										max={100}
+										step={1}
+										className='w-full cursor-pointer'
+										onValueChange={(value) => {
+											setVolume(value[0]);
+											if (audioRef.current) {
+												audioRef.current.volume = value[0] / 100;
+											}
+										}}
+									/>
+								</div>
+							)}
+						</div>
 					</div>
 
 					<div className='hidden sm:flex items-center gap-2 w-full'>
