@@ -24,7 +24,7 @@ const AlbumPage = () => {
   if (isLoading || !currentAlbum) return null;
 
   const isAlbumPlaying =
-    Array.isArray(currentAlbum.songs) &&
+    Array.isArray(currentAlbum?.songs) &&
     currentAlbum.songs.some((s) => s._id === currentSong?._id);
 
   return (
@@ -55,7 +55,7 @@ const AlbumPage = () => {
                     {currentAlbum.artist}
                   </span>
                   <span className="hidden sm:inline">•</span>
-                  <span>{currentAlbum.songs.length} songs</span>
+                  <span>{currentAlbum?.songs?.length || 0} songs</span>
                   <span className="hidden sm:inline">•</span>
                   <span>{currentAlbum.releaseYear}</span>
                 </div>
@@ -66,7 +66,7 @@ const AlbumPage = () => {
             <div className="mt-5 flex justify-center sm:justify-start">
               <Button
                 onClick={() =>
-                  isAlbumPlaying ? togglePlay() : playAlbum(currentAlbum.songs, 0)
+                  isAlbumPlaying ? togglePlay() : playAlbum(currentAlbum?.songs || [], 0)
                 }
                 size="icon"
                 className="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-green-500 hover:bg-green-400"
@@ -93,7 +93,7 @@ const AlbumPage = () => {
 
               {/* SONG ROWS */}
               <div className="divide-y divide-white/5">
-                {currentAlbum.songs.map((song, index) => {
+                {(currentAlbum?.songs || []).map((song, index) => {
                   const isCurrent = song._id === currentSong?._id;
 
                   return (

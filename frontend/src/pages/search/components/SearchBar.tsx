@@ -1,4 +1,4 @@
-import { Search as SearchIcon, X, Clock, TrendingUp } from "lucide-react";
+import { Search as SearchIcon, X, Clock } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useSearchStore } from "@/stores/useSearchStore";
 import { useState, useRef, useEffect } from "react";
@@ -27,11 +27,18 @@ const SearchBar = ({ value, onChange, onSearch }: SearchBarProps) => {
 		return () => clearTimeout(timer);
 	}, [value, getSuggestions]);
 
+	// Flat list of suggestions for keyboard navigation
+	const flatSuggestions = [
+		...suggestions.songs.map(s => ({ ...s, type: 'song' })),
+		...suggestions.albums.map(a => ({ ...a, type: 'album' })),
+		...suggestions.artists.map(ar => ({ ...ar, type: 'artist' }))
+	];
+
 	// Handle keyboard navigation
 	const handleKeyDown = (e: React.KeyboardEvent) => {
 		if (!showSuggestions) return;
 
-		const items = value.trim() ? suggestions : searchHistory.map(h => ({ title: h, _id: h }));
+		const items = value.trim() ? flatSuggestions : searchHistory.map(h => ({ title: h, _id: h, type: 'history' }));
 		
 		switch (e.key) {
 			case "ArrowDown":
@@ -45,15 +52,17 @@ const SearchBar = ({ value, onChange, onSearch }: SearchBarProps) => {
 			case "Enter":
 				e.preventDefault();
 				if (selectedIndex >= 0 && items[selectedIndex]) {
+					const item = items[selectedIndex] as any;
 					if (value.trim()) {
-						// It's a suggestion
-						const song = suggestions[selectedIndex];
-						navigate(`/song/${song._id}`);
+						if (item.type === 'song') navigate(`/song/${item._id}`);
+						else if (item.type === 'album') navigate(`/albums/${item._id}`);
+						// Artists could go to a search or a specific artist page if we have one
+						else if (item.type === 'artist') {
+							onChange(item.name);
+							onSearch(item.name);
+						}
 					} else {
-						// It's a history item
-						const query = searchHistory[selectedIndex];
-						onChange(query);
-						onSearch(query);
+						handleHistoryClick(item.title);
 					}
 					setShowSuggestions(false);
 				} else if (value.trim()) {
@@ -68,8 +77,13 @@ const SearchBar = ({ value, onChange, onSearch }: SearchBarProps) => {
 		}
 	};
 
-	const handleSuggestionClick = (songId: string) => {
-		navigate(`/song/${songId}`);
+	const handleSuggestionClick = (item: any) => {
+		if (item.type === 'song') navigate(`/song/${item._id}`);
+		else if (item.type === 'album') navigate(`/albums/${item._id}`);
+		else if (item.type === 'artist') {
+			onChange(item.name);
+			onSearch(item.name);
+		}
 		setShowSuggestions(false);
 	};
 
@@ -80,7 +94,8 @@ const SearchBar = ({ value, onChange, onSearch }: SearchBarProps) => {
 	};
 
 	const showHistory = !value.trim() && searchHistory.length > 0 && showSuggestions;
-	const showSuggestionsList = value.trim() && suggestions.length > 0 && showSuggestions;
+	const hasAnySuggestions = suggestions.songs.length > 0 || suggestions.albums.length > 0 || suggestions.artists.length > 0;
+	const showSuggestionsList = value.trim() && hasAnySuggestions && showSuggestions;
 
 	return (
 		<div className="relative">
@@ -116,7 +131,7 @@ const SearchBar = ({ value, onChange, onSearch }: SearchBarProps) => {
 			{/* Suggestions Dropdown */}
 			{(showHistory || showSuggestionsList) && (
 				<div className="absolute top-full mt-2 w-full bg-zinc-800 rounded-lg shadow-2xl 
-					border border-zinc-700 overflow-hidden z-50 backdrop-blur-xl">
+					border border-zinc-700 overflow-hidden z-50 backdrop-blur-xl max-h-[450px] overflow-y-auto">
 					
 					{/* Search History */}
 					{showHistory && (
@@ -147,40 +162,84 @@ const SearchBar = ({ value, onChange, onSearch }: SearchBarProps) => {
 
 					{/* Suggestions */}
 					{showSuggestionsList && (
-						<div className="p-2">
+						<div className="p-2 space-y-4">
 							{isSuggestionsLoading ? (
 								<div className="px-3 py-6 text-center text-sm text-zinc-400">
 									Loading suggestions...
 								</div>
 							) : (
 								<>
-									<div className="px-3 py-2">
-										<span className="text-sm font-semibold text-zinc-400">Suggestions</span>
-									</div>
-									{suggestions.map((song, index) => (
-										<button
-											key={song._id}
-											onClick={() => handleSuggestionClick(song._id)}
-											className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-md
-												hover:bg-zinc-700/50 transition-colors
-												${selectedIndex === index ? 'bg-zinc-700/50' : ''}`}
-										>
-											<img
-												src={song.imageUrl}
-												alt={song.title}
-												className="h-10 w-10 rounded object-cover"
-											/>
-											<div className="flex-1 min-w-0 text-left">
-												<div className="text-sm font-medium text-white truncate">
-													{song.title}
-												</div>
-												<div className="text-xs text-zinc-400 truncate">
-													{song.artist}
-												</div>
+									{/* Songs Section */}
+									{suggestions.songs.length > 0 && (
+										<div>
+											<div className="px-3 py-1 mb-1">
+												<span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Songs</span>
 											</div>
-											<TrendingUp className="h-4 w-4 text-zinc-500" />
-										</button>
-									))}
+											{suggestions.songs.map((song, index) => (
+												<button
+													key={song._id}
+													onClick={() => handleSuggestionClick({ ...song, type: 'song' })}
+													className={`w-full flex items-center gap-3 px-3 py-2 rounded-md
+														hover:bg-zinc-700/30 transition-colors
+														${selectedIndex === index ? 'bg-zinc-700/50' : ''}`}
+												>
+													<img src={song.imageUrl} alt="" className="h-10 w-10 rounded object-cover" />
+													<div className="flex-1 min-w-0 text-left">
+														<div className="text-sm font-medium text-white truncate">{song.title}</div>
+														<div className="text-xs text-zinc-400 truncate">{song.artist}</div>
+													</div>
+												</button>
+											))}
+										</div>
+									)}
+
+									{/* Albums Section */}
+									{suggestions.albums.length > 0 && (
+										<div>
+											<div className="px-3 py-1 mb-1 border-t border-zinc-700/30 pt-3">
+												<span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Albums / Movies</span>
+											</div>
+											{suggestions.albums.map((album, index) => (
+												<button
+													key={album._id}
+													onClick={() => handleSuggestionClick({ ...album, type: 'album' })}
+													className={`w-full flex items-center gap-3 px-3 py-2 rounded-md
+														hover:bg-zinc-700/30 transition-colors
+														${selectedIndex === (suggestions.songs.length + index) ? 'bg-zinc-700/50' : ''}`}
+												>
+													<img src={album.imageUrl} alt="" className="h-10 w-10 rounded object-cover shadow-sm" />
+													<div className="flex-1 min-w-0 text-left">
+														<div className="text-sm font-medium text-white truncate">{album.title}</div>
+														<div className="text-xs text-zinc-400 truncate">{album.artist}</div>
+													</div>
+												</button>
+											))}
+										</div>
+									)}
+
+									{/* Artists Section */}
+									{suggestions.artists.length > 0 && (
+										<div>
+											<div className="px-3 py-1 mb-1 border-t border-zinc-700/30 pt-3">
+												<span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Artists / Singers</span>
+											</div>
+											{suggestions.artists.map((artist, index) => (
+												<button
+													key={artist._id}
+													onClick={() => handleSuggestionClick({ ...artist, type: 'artist' })}
+													className={`w-full flex items-center gap-3 px-3 py-2 rounded-md
+														hover:bg-zinc-700/30 transition-colors
+														${selectedIndex === (suggestions.songs.length + suggestions.albums.length + index) ? 'bg-zinc-700/50' : ''}`}
+												>
+													<img src={artist.imageUrl} alt="" className="h-10 w-10 rounded-full object-cover shadow-sm" />
+													<div className="flex-1 min-w-0 text-left">
+														<div className="text-sm font-medium text-white truncate">{artist.name}</div>
+														<div className="text-xs text-zinc-400 truncate">{artist.role}</div>
+													</div>
+												</button>
+											))}
+										</div>
+									)}
 								</>
 							)}
 						</div>
