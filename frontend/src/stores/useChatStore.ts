@@ -1,33 +1,16 @@
 import { axiosInstance } from "@/lib/axios";
 import { Message, User } from "@/types";
 import { create } from "zustand";
-import { io } from "socket.io-client";
-
-interface ChatStore {
-	users: User[];
-	isLoading: boolean;
-	error: string | null;
-	socket: any;
-	isConnected: boolean;
-	onlineUsers: Set<string>;
-	userActivities: Map<string, string>;
-	messages: Message[];
-	selectedUser: User | null;
-
-	fetchUsers: () => Promise<void>;
-	initSocket: (userId: string) => void;
-	disconnectSocket: () => void;
-	sendMessage: (receiverId: string, senderId: string, content: string) => void;
-	fetchMessages: (userId: string) => Promise<void>;
-	setSelectedUser: (user: User | null) => void;
-}
-
-const baseURL = import.meta.env.MODE === "development" ? "http://localhost:5000" : "/";
-
-const socket = io(baseURL, {
-	autoConnect: false, // only connect if user is authenticated
-	withCredentials: true,
-});
+// import { io } from "socket.io-client";
+// const socket = io(baseURL, { ... });
+const socket = {
+	auth: {},
+	connect: () => { },
+	disconnect: () => { },
+	emit: () => { },
+	on: () => { },
+	off: () => { },
+};
 
 export const useChatStore = create<ChatStore>((set, get) => ({
 	users: [],
