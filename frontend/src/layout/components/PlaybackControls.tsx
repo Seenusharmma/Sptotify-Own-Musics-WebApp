@@ -16,7 +16,7 @@ const formatTime = (seconds: number) => {
 
 export const PlaybackControls = () => {
 	const navigate = useNavigate();
-	const { currentSong, isPlaying, togglePlay, playNext, playPrevious, autoPlayNext, toggleAutoPlay } = usePlayerStore();
+	const { currentSong, isPlaying, togglePlay, playNext, playPrevious, autoPlayNext, toggleAutoPlay, isShuffled, toggleShuffle } = usePlayerStore();
 	const { isOffline } = useMusicStore();
 
 	const [volume, setVolume] = useState(75);
@@ -64,16 +64,9 @@ export const PlaybackControls = () => {
 		audio.addEventListener("timeupdate", updateTime);
 		audio.addEventListener("loadedmetadata", updateDuration);
 
-		const handleEnded = () => {
-			usePlayerStore.setState({ isPlaying: false });
-		};
-
-		audio.addEventListener("ended", handleEnded);
-
 		return () => {
 			audio.removeEventListener("timeupdate", updateTime);
 			audio.removeEventListener("loadedmetadata", updateDuration);
-			audio.removeEventListener("ended", handleEnded);
 		};
 	}, [currentSong]);
 
@@ -116,7 +109,12 @@ export const PlaybackControls = () => {
 						<Button
 							size='icon'
 							variant='ghost'
-							className='hidden md:inline-flex hover:text-white text-zinc-400'
+							className={cn(
+								"hidden md:inline-flex hover:text-white transition-colors",
+								isShuffled ? "text-emerald-500" : "text-zinc-400"
+							)}
+							onClick={toggleShuffle}
+							title={isShuffled ? 'Shuffle: ON' : 'Shuffle: OFF'}
 						>
 							<Shuffle className='h-4 w-4' />
 						</Button>
@@ -152,9 +150,10 @@ export const PlaybackControls = () => {
 							size='icon'
 							variant='ghost'
 							onClick={toggleAutoPlay}
-							className={`hidden md:inline-flex hover:text-white ${
-								autoPlayNext ? 'text-emerald-500' : 'text-zinc-400'
-							}`}
+							className={cn(
+								"hover:text-white transition-colors h-8 w-8",
+								autoPlayNext ? "text-emerald-500" : "text-zinc-400"
+							)}
 							title={autoPlayNext ? 'Auto-play: ON' : 'Auto-play: OFF'}
 						>
 							<ListMusic className='h-4 w-4' />

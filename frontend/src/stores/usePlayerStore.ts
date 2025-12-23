@@ -6,13 +6,16 @@ interface PlayerStore {
 	currentSong: Song | null;
 	isPlaying: boolean;
 	queue: Song[];
+	originalQueue: Song[];
 	currentIndex: number;
 	autoPlayNext: boolean;
+	isShuffled: boolean;
 
 	initializeQueue: (songs: Song[]) => void;
 	playAlbum: (songs: Song[], startIndex?: number) => void;
 	setCurrentSong: (song: Song | null) => void;
 	togglePlay: () => void;
+	toggleShuffle: () => void;
 	playNext: () => void;
 	playPrevious: () => void;
 	toggleAutoPlay: () => void;
@@ -22,12 +25,15 @@ export const usePlayerStore = create<PlayerStore>((set, get) => ({
 	currentSong: null,
 	isPlaying: false,
 	queue: [],
+	originalQueue: [], // Store the original order for un-shuffling
 	currentIndex: -1,
 	autoPlayNext: true,
+	isShuffled: false,
 
 	initializeQueue: (songs: Song[]) => {
 		set({
 			queue: songs,
+			originalQueue: [...songs],
 			currentSong: get().currentSong || songs[0],
 			currentIndex: get().currentIndex === -1 ? 0 : get().currentIndex,
 		});
@@ -45,11 +51,14 @@ export const usePlayerStore = create<PlayerStore>((set, get) => ({
 				activity: `Playing ${song.title} by ${song.artist}`,
 			});
 		}
+
 		set({
-			queue: songs,
+			queue: [...songs],
+			originalQueue: [...songs],
 			currentSong: song,
 			currentIndex: startIndex,
 			isPlaying: true,
+			isShuffled: false, // Reset shuffle when playing a new album
 		});
 	},
 
@@ -88,6 +97,33 @@ export const usePlayerStore = create<PlayerStore>((set, get) => ({
 		set({
 			isPlaying: willStartPlaying,
 		});
+	},
+
+	toggleShuffle: () => {
+		const { isShuffled, queue, originalQueue, currentSong } = get();
+		const newIsShuffled = !isShuffled;
+
+		if (newIsShuffled) {
+			// Shuffling: Keep current song at its position or just shuffle around it
+			const currentSongId = currentSong?._id;
+			const otherSongs = queue.filter((s) => s._id !== currentSongId);
+			const shuffled = [...otherSongs].sort(() => Math.random() - 0.5);
+
+			const newQueue = currentSong ? [currentSong, ...shuffled] : shuffled;
+			set({
+				isShuffled: true,
+				queue: newQueue,
+				currentIndex: 0,
+			});
+		} else {
+			// Un-shuffling: Restore original order
+			const songIndex = originalQueue.findIndex((s) => s._id === currentSong?._id);
+			set({
+				isShuffled: false,
+				queue: [...originalQueue],
+				currentIndex: songIndex !== -1 ? songIndex : 0,
+			});
+		}
 	},
 
 	playNext: () => {

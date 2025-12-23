@@ -21,6 +21,8 @@ const AudioPlayer = () => {
 		const handleEnded = () => {
 			if (autoPlayNext) {
 				playNext();
+			} else {
+				usePlayerStore.setState({ isPlaying: false });
 			}
 		};
 
