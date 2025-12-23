@@ -21,6 +21,7 @@ interface MusicStore {
 	featuredPlaylists: Album[];
 	likedSongs: Song[];
 	downloadedSongs: Song[];
+	recommendations: Song[];
 	toggleLike: (song: Song) => void;
 	addDownload: (song: Song) => void;
 	isLiked: (songId: string) => boolean;
@@ -37,6 +38,7 @@ interface MusicStore {
 	fetchFeaturedPlaylists: () => Promise<void>;
 	fetchStats: () => Promise<void>;
 	fetchSongs: () => Promise<void>;
+	fetchRecommendations: (songId: string) => Promise<void>;
 	deleteSong: (id: string) => Promise<void>;
 	deleteAlbum: (id: string) => Promise<void>;
 }
@@ -54,6 +56,7 @@ export const useMusicStore = create<MusicStore>((set, get) => ({
 	punjabiSongs: [],
 	hollywoodSongs: [],
 	featuredPlaylists: [],
+	recommendations: [],
 	currentSongDetails: null,
 	stats: {
 		totalSongs: 0,
@@ -135,6 +138,33 @@ export const useMusicStore = create<MusicStore>((set, get) => ({
 			set({ songs: response.data });
 		} catch (error: any) {
 			set({ error: error.message });
+		} finally {
+			set({ isLoading: false });
+		}
+	},
+
+	fetchRecommendations: async (songId: string) => {
+		set({ isLoading: true, error: null });
+		try {
+			const actualId = songId.startsWith("jio-") ? songId.replace("jio-", "") : songId;
+			const response = await axios.get(`https://jiosavan-api-with-playlist.vercel.app/api/songs/${actualId}/suggestions`);
+			const data = response.data?.data;
+
+			const mappedSongs: Song[] = Array.isArray(data) ? data.map((song: any) => ({
+				_id: `jio-${song.id}`,
+				title: song.name,
+				artist: Array.isArray(song.artists?.primary) ? song.artists.primary.map((a: any) => a.name).join(", ") : '',
+				albumId: null,
+				imageUrl: song.image?.[song.image.length - 1]?.url || '',
+				audioUrl: song.downloadUrl?.[song.downloadUrl.length - 1]?.url || '',
+				duration: song.duration,
+				createdAt: new Date().toISOString(),
+				updatedAt: new Date().toISOString(),
+			})) : [];
+
+			set({ recommendations: mappedSongs });
+		} catch (error: any) {
+			set({ error: error.response?.data?.message || "Failed to fetch recommendations", recommendations: [] });
 		} finally {
 			set({ isLoading: false });
 		}

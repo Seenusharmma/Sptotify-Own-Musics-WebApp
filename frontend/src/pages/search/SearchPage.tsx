@@ -86,7 +86,7 @@ const SearchPage = () => {
 										key={song._id}
 										className="group relative bg-zinc-800/40 hover:bg-zinc-800/60 p-4 rounded-lg
 											transition-all duration-200 cursor-pointer backdrop-blur-sm"
-										onClick={() => navigate(`/songs/${song._id}`)}
+										onClick={() => navigate(`/song/${song._id}`)}
 									>
 										{/* Album Art */}
 										<div className="relative aspect-square mb-4 overflow-hidden rounded-md shadow-lg">

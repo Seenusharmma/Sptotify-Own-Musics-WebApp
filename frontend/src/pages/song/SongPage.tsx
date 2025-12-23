@@ -1,25 +1,63 @@
 import { useEffect } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, Link } from "react-router-dom";
 import { Play, Pause, Clock, User, Download, Share2, Heart } from "lucide-react";
 
 import { useMusicStore } from "@/stores/useMusicStore";
 import { usePlayerStore } from "@/stores/usePlayerStore";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
+import { Slider } from "@/components/ui/slider";
 import { formatDuration } from "@/pages/album/AlbumPage";
 import toast from "react-hot-toast";
+import { useRef, useState } from "react";
+
+const formatTime = (seconds: number) => {
+	const minutes = Math.floor(seconds / 60);
+	const remainingSeconds = Math.floor(seconds % 60);
+	return `${minutes}:${remainingSeconds.toString().padStart(2, "0")}`;
+};
 
 const SongPage = () => {
   const { songId } = useParams();
 
-  const { fetchSongById, currentSongDetails, isLoading, error, toggleLike, isLiked, addDownload } =
+  const { fetchSongById, currentSongDetails, isLoading, error, toggleLike, isLiked, addDownload, recommendations, fetchRecommendations } =
     useMusicStore();
   const { currentSong, isPlaying, playAlbum, togglePlay } =
     usePlayerStore();
 
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
   useEffect(() => {
-    if (songId) fetchSongById(songId);
-  }, [songId, fetchSongById]);
+    audioRef.current = document.querySelector("audio");
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    const updateTime = () => setCurrentTime(audio.currentTime);
+    const updateDuration = () => setDuration(audio.duration);
+
+    audio.addEventListener("timeupdate", updateTime);
+    audio.addEventListener("loadedmetadata", updateDuration);
+
+    return () => {
+      audio.removeEventListener("timeupdate", updateTime);
+      audio.removeEventListener("loadedmetadata", updateDuration);
+    };
+  }, [songId]);
+
+  const handleSeek = (value: number[]) => {
+    if (audioRef.current) {
+      audioRef.current.currentTime = value[0];
+    }
+  };
+
+  useEffect(() => {
+    if (songId) {
+        fetchSongById(songId);
+        fetchRecommendations(songId);
+    }
+  }, [songId, fetchSongById, fetchRecommendations]);
 
   if (isLoading) {
     return (
@@ -140,6 +178,21 @@ const SongPage = () => {
         <section className="px-4 sm:px-6 lg:px-16 pb-16">
           <div className="max-w-7xl mx-auto space-y-12">
 
+            {/* Progress Slider (Mobile & Desktop) */}
+            <div className="space-y-2">
+                <Slider
+                    value={[currentTime]}
+                    max={duration || 100}
+                    step={1}
+                    className="w-full hover:cursor-grab active:cursor-grabbing"
+                    onValueChange={handleSeek}
+                />
+                <div className="flex justify-between text-xs text-zinc-400 font-medium tracking-wider">
+                    <span>{formatTime(currentTime)}</span>
+                    <span>{formatTime(duration)}</span>
+                </div>
+            </div>
+
             {/* Action Bar */}
             <div className="flex flex-col md:flex-row items-center justify-between gap-8 border-t border-white/10 pt-8">
               <div className="flex items-center gap-6">
@@ -189,6 +242,35 @@ const SongPage = () => {
               </div>
             </div>
 
+            {/* Recommendations section */}
+            <div className="space-y-6">
+                <h2 className="text-2xl font-bold text-white px-1">Similar Songs</h2>
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 pb-8">
+                    {recommendations?.slice(0, 10).map((song) => (
+                        <div key={song._id} className="bg-zinc-900/40 p-3 rounded-lg hover:bg-zinc-800/60 transition-all group flex flex-col gap-3">
+                            <div className="relative aspect-square rounded-md overflow-hidden shadow-lg">
+                                <img src={song.imageUrl} alt={song.title} className="object-cover w-full h-full group-hover:scale-110 transition-transform duration-500" />
+                                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                    <Button
+                                        size="icon"
+                                        className="bg-emerald-500 hover:bg-emerald-400 text-black rounded-full scale-0 group-hover:scale-100 transition-transform duration-300 shadow-xl"
+                                        onClick={(e) => {
+                                            e.preventDefault();
+                                            playAlbum([song], 0);
+                                        }}
+                                    >
+                                        <Play className="fill-current ml-1" />
+                                    </Button>
+                                </div>
+                            </div>
+                            <Link to={`/song/${song._id}`} className="flex-1 min-w-0">
+                                <h3 className="font-semibold text-white truncate hover:underline">{song.title}</h3>
+                                <p className="text-sm text-zinc-400 truncate">{song.artist}</p>
+                            </Link>
+                        </div>
+                    ))}
+                </div>
+            </div>
           </div>
         </section>
       </ScrollArea>

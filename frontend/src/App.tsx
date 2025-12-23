@@ -31,7 +31,7 @@ function App() {
 					<Route path='/' element={<HomePage />} />
 					<Route path='/chat' element={<ChatPage />} />
 					<Route path='/search' element={<SearchPage />} />
-					<Route path='/songs/:songId' element={<SongPage />} />
+					<Route path='/song/:songId' element={<SongPage />} />
 					<Route path='/albums/:albumId' element={<AlbumPage />} />
 					<Route path='/profile' element={<ProfilePage />} />
 					<Route path='/liked-songs' element={<LikedSongsPage />} />

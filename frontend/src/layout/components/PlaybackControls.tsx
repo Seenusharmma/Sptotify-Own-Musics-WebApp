@@ -3,6 +3,7 @@ import { Slider } from "@/components/ui/slider";
 import { usePlayerStore } from "@/stores/usePlayerStore";
 import { Laptop2, ListMusic, Mic2, Pause, Play, Shuffle, SkipBack, SkipForward, Volume1 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 
 const formatTime = (seconds: number) => {
@@ -12,6 +13,7 @@ const formatTime = (seconds: number) => {
 };
 
 export const PlaybackControls = () => {
+	const navigate = useNavigate();
 	const { currentSong, isPlaying, togglePlay, playNext, playPrevious, autoPlayNext, toggleAutoPlay } = usePlayerStore();
 
 	const [volume, setVolume] = useState(75);
@@ -57,21 +59,24 @@ export const PlaybackControls = () => {
 				{/* currently playing song */}
 				<div className='flex items-center gap-3 min-w-0 flex-1 sm:flex-none sm:min-w-[180px] sm:w-[30%]'>
 					{currentSong && (
-						<>
+						<div 
+							onClick={() => navigate(`/song/${currentSong._id}`)} 
+							className='flex items-center gap-3 min-w-0 group hover:opacity-80 transition-opacity cursor-pointer'
+						>
 							<img
 								src={currentSong.imageUrl}
 								alt={currentSong.title}
-								className='w-10 h-10 sm:w-14 sm:h-14 object-cover rounded-md flex-shrink-0'
+								className='w-10 h-10 sm:w-14 sm:h-14 object-cover rounded-md flex-shrink-0 shadow-lg'
 							/>
 							<div className='min-w-0 overflow-hidden'>
-								<div className='font-medium truncate text-sm sm:text-base hover:underline cursor-pointer'>
+								<div className='font-medium truncate text-sm sm:text-base group-hover:underline'>
 									{currentSong.title}
 								</div>
-								<div className='text-xs sm:text-sm text-zinc-400 truncate hover:underline cursor-pointer'>
+								<div className='text-xs sm:text-sm text-zinc-400 truncate group-hover:text-zinc-300'>
 									{currentSong.artist}
 								</div>
 							</div>
-						</>
+						</div>
 					)}
 				</div>
 
@@ -157,8 +162,8 @@ export const PlaybackControls = () => {
 						</div>
 					</div>
 
-					<div className='hidden sm:flex items-center gap-2 w-full'>
-						<div className='text-xs text-zinc-400'>{formatTime(currentTime)}</div>
+					<div className='flex items-center gap-2 w-full'>
+						<div className='text-[10px] sm:text-xs text-zinc-400 w-10 text-right'>{formatTime(currentTime)}</div>
 						<Slider
 							value={[currentTime]}
 							max={duration || 100}
@@ -166,7 +171,7 @@ export const PlaybackControls = () => {
 							className='w-full hover:cursor-grab active:cursor-grabbing'
 							onValueChange={handleSeek}
 						/>
-						<div className='text-xs text-zinc-400'>{formatTime(duration)}</div>
+						<div className='text-[10px] sm:text-xs text-zinc-400 w-10'>{formatTime(duration)}</div>
 					</div>
 				</div>
 				{/* volume controls */}

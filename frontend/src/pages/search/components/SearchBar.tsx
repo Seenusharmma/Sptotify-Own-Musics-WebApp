@@ -48,7 +48,7 @@ const SearchBar = ({ value, onChange, onSearch }: SearchBarProps) => {
 					if (value.trim()) {
 						// It's a suggestion
 						const song = suggestions[selectedIndex];
-						navigate(`/songs/${song._id}`);
+						navigate(`/song/${song._id}`);
 					} else {
 						// It's a history item
 						const query = searchHistory[selectedIndex];
@@ -69,7 +69,7 @@ const SearchBar = ({ value, onChange, onSearch }: SearchBarProps) => {
 	};
 
 	const handleSuggestionClick = (songId: string) => {
-		navigate(`/songs/${songId}`);
+		navigate(`/song/${songId}`);
 		setShowSuggestions(false);
 	};
 

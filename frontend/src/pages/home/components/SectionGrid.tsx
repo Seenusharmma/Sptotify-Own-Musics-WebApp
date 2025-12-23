@@ -33,7 +33,7 @@ const SectionGrid = ({ songs, title, isLoading }: SectionGridProps) => {
 					<div
 						key={song._id}
 						className='bg-zinc-800/40 p-4 rounded-md hover:bg-zinc-700/40 transition-all group cursor-pointer'
-						onClick={() => navigate(`/songs/${song._id}`)}
+						onClick={() => navigate(`/song/${song._id}`)}
 					>
 						<div className='relative mb-4'>
 							<div className='aspect-square rounded-md shadow-lg overflow-hidden'>
