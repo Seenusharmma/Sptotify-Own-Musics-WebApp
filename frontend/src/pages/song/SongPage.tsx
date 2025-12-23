@@ -20,7 +20,7 @@ const formatTime = (seconds: number) => {
 const SongPage = () => {
   const { songId } = useParams();
 
-  const { fetchSongById, currentSongDetails, isLoading, error, toggleLike, isLiked, addDownload, recommendations, fetchRecommendations } =
+  const { fetchSongById, currentSongDetails, isLoading, error, toggleLike, isLiked, addDownload, removeDownload, downloadedSongs, recommendations, fetchRecommendations } =
     useMusicStore();
   const { currentSong, isPlaying, playAlbum, togglePlay } =
     usePlayerStore();
@@ -84,21 +84,13 @@ const SongPage = () => {
     else playAlbum([currentSongDetails], 0);
   };
 
+  const isDownloaded = downloadedSongs.some((s) => s._id === currentSongDetails._id);
+
   const handleDownload = async () => {
-    try {
-      const response = await fetch(currentSongDetails.audioUrl);
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `${currentSongDetails.title} - ${currentSongDetails.artist}.mp3`;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
-      addDownload(currentSongDetails);
-    } catch (error) {
-      console.error('Download failed:', error);
+    if (isDownloaded) {
+      await removeDownload(currentSongDetails._id);
+    } else {
+      await addDownload(currentSongDetails);
     }
   };
 
@@ -223,10 +215,11 @@ const SongPage = () => {
                         onClick={handleDownload}
                         variant="ghost"
                         size="icon"
-                        className="w-12 h-12 rounded-full border border-white/10 hover:bg-white/5 text-zinc-400 hover:text-white"
-                        title="Download"
+                        className={`w-12 h-12 rounded-full border border-white/10 hover:bg-white/5 transition-colors
+                        ${isDownloaded ? "text-emerald-500 border-emerald-500/50 bg-emerald-500/5" : "text-zinc-400 hover:text-white"}`}
+                        title={isDownloaded ? "Remove from downloads" : "Download for offline playback"}
                     >
-                        <Download className="w-6 h-6" />
+                        <Download className={`w-6 h-6 ${isDownloaded ? "fill-emerald-500" : ""}`} />
                     </Button>
 
                     <Button

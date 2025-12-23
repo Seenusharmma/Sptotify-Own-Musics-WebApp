@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { Route, Routes } from "react-router-dom";
 import HomePage from "./pages/home/HomePage";
 import AuthCallbackPage from "./pages/auth-callback/AuthCallbackPage";
@@ -15,8 +16,24 @@ import ProfilePage from "./pages/profile/ProfilePage";
 import LikedSongsPage from "./pages/liked-songs/LikedSongsPage";
 import LibraryPage from "./pages/library/LibraryPage";
 import DownloadedSongsPage from "./pages/downloaded-songs/DownloadedSongsPage";
+import { useMusicStore } from "./stores/useMusicStore";
 
 function App() {
+	const { setIsOffline } = useMusicStore();
+
+	useEffect(() => {
+		const handleOnline = () => setIsOffline(false);
+		const handleOffline = () => setIsOffline(true);
+
+		window.addEventListener("online", handleOnline);
+		window.addEventListener("offline", handleOffline);
+
+		return () => {
+			window.removeEventListener("online", handleOnline);
+			window.removeEventListener("offline", handleOffline);
+		};
+	}, [setIsOffline]);
+
 	return (
 		<>
 			<Routes>

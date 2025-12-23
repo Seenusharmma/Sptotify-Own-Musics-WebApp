@@ -1,10 +1,10 @@
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useMusicStore } from "@/stores/useMusicStore";
-import { Heart, Music } from "lucide-react";
+import { Download, Heart, Music } from "lucide-react";
 import { Link } from "react-router-dom";
 
 const LibraryPage = () => {
-    const { albums, featuredPlaylists, likedSongs } = useMusicStore();
+    const { albums, featuredPlaylists, likedSongs, downloadedSongs } = useMusicStore();
 
     return (
         <ScrollArea className='h-full'>
@@ -35,12 +35,12 @@ const LibraryPage = () => {
                     >
                         <div className="relative mb-4">
                             <div className='aspect-square rounded-md bg-gradient-to-br from-emerald-700 to-emerald-900 flex items-center justify-center'>
-                                <span className="text-4xl sm:text-5xl">⬇️</span>
+                                <Download className="w-16 h-16 text-white" />
                             </div>
                         </div>
-                        <h3 className='font-semibold text-white mb-1 truncate'>Downloaded Songs</h3>
+                        <h3 className='font-semibold text-white mb-1 truncate'>Downloads</h3>
                         <p className='text-sm text-zinc-400 truncate'>
-                            Playlist • {Array.isArray(useMusicStore.getState().downloadedSongs) ? useMusicStore.getState().downloadedSongs.length : 0} songs
+                            Local • {downloadedSongs.length} songs
                         </p>
                     </Link>
 

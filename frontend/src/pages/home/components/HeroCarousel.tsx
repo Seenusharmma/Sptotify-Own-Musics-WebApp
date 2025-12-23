@@ -32,11 +32,13 @@ const HeroCarousel = () => {
 
     const currentSlide = safeFeaturedSongs[currentIndex];
 
-    if (isLoading || safeFeaturedSongs.length === 0) {
+    if (isLoading) {
         return (
             <div className='w-full h-[250px] sm:h-[400px] bg-zinc-800/50 rounded-xl animate-pulse mb-8' />
         );
     }
+
+    if (safeFeaturedSongs.length === 0) return null;
 
     const isCurrentPlaying = currentSong?._id === currentSlide?._id && isPlaying;
 

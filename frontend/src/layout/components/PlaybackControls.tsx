@@ -1,10 +1,12 @@
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { usePlayerStore } from "@/stores/usePlayerStore";
-import { Laptop2, ListMusic, Mic2, Pause, Play, Shuffle, SkipBack, SkipForward, Volume1 } from "lucide-react";
+import { Laptop2, ListMusic, Mic2, Pause, Play, Shuffle, SkipBack, SkipForward, Volume1, WifiOff } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
+import { useMusicStore } from "@/stores/useMusicStore";
+import { idbStorage } from "@/lib/idb";
 
 const formatTime = (seconds: number) => {
 	const minutes = Math.floor(seconds / 60);
@@ -15,12 +17,40 @@ const formatTime = (seconds: number) => {
 export const PlaybackControls = () => {
 	const navigate = useNavigate();
 	const { currentSong, isPlaying, togglePlay, playNext, playPrevious, autoPlayNext, toggleAutoPlay } = usePlayerStore();
+	const { isOffline } = useMusicStore();
 
 	const [volume, setVolume] = useState(75);
 	const [showMobileVolume, setShowMobileVolume] = useState(false);
 	const [currentTime, setCurrentTime] = useState(0);
 	const [duration, setDuration] = useState(0);
+	const [localImageUrl, setLocalImageUrl] = useState<string | null>(null);
 	const audioRef = useRef<HTMLAudioElement | null>(null);
+
+	useEffect(() => {
+		let blobUrl: string | null = null;
+
+		const loadLocalImage = async () => {
+			if (currentSong?._id) {
+				const blob = await idbStorage.get(`image-${currentSong._id}`);
+				if (blob) {
+					blobUrl = URL.createObjectURL(blob);
+					setLocalImageUrl(blobUrl);
+				} else {
+					setLocalImageUrl(null);
+				}
+			} else {
+				setLocalImageUrl(null);
+			}
+		};
+
+		loadLocalImage();
+
+		return () => {
+			if (blobUrl) {
+				URL.revokeObjectURL(blobUrl);
+			}
+		};
+	}, [currentSong?._id]);
 
 	useEffect(() => {
 		audioRef.current = document.querySelector("audio");
@@ -64,7 +94,7 @@ export const PlaybackControls = () => {
 							className='flex items-center gap-3 min-w-0 group hover:opacity-80 transition-opacity cursor-pointer'
 						>
 							<img
-								src={currentSong.imageUrl}
+								src={localImageUrl || currentSong.imageUrl}
 								alt={currentSong.title}
 								className='w-10 h-10 sm:w-14 sm:h-14 object-cover rounded-md flex-shrink-0 shadow-lg'
 							/>
@@ -187,6 +217,12 @@ export const PlaybackControls = () => {
 					</Button>
 
 					<div className='flex items-center gap-2'>
+						{isOffline && (
+							<div className="flex items-center gap-1.5 px-2 py-1 rounded bg-red-500/10 text-red-500 text-[10px] font-bold uppercase tracking-wider animate-pulse">
+								<WifiOff className="size-3" />
+								Offline
+							</div>
+						)}
 						<Button size='icon' variant='ghost' className='hover:text-white text-zinc-400'>
 							<Volume1 className='h-4 w-4' />
 						</Button>

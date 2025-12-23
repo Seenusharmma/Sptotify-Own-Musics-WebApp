@@ -1,15 +1,18 @@
 import { usePlayerStore } from "@/stores/usePlayerStore";
+import { useMusicStore } from "@/stores/useMusicStore";
 import { useEffect, useRef } from "react";
+import { idbStorage } from "@/lib/idb";
 
 const AudioPlayer = () => {
 	const audioRef = useRef<HTMLAudioElement>(null);
 	const prevSongRef = useRef<string | null>(null);
 
 	const { currentSong, isPlaying, playNext, autoPlayNext } = usePlayerStore();
+	const { isOffline } = useMusicStore();
 
 	// handle play/pause logic
 	useEffect(() => {
-		if (isPlaying) audioRef.current?.play();
+		if (isPlaying) audioRef.current?.play().catch(() => {});
 		else audioRef.current?.pause();
 	}, [isPlaying]);
 
@@ -28,24 +31,54 @@ const AudioPlayer = () => {
 		return () => audio?.removeEventListener("ended", handleEnded);
 	}, [playNext, autoPlayNext]);
 
-	// handle song changes
+	// handle song changes and offline status
 	useEffect(() => {
 		if (!audioRef.current || !currentSong) return;
 
 		const audio = audioRef.current;
+		let blobUrl: string | null = null;
 
-		// check if this is actually a new song
-		const isSongChange = prevSongRef.current !== currentSong?.audioUrl;
-		if (isSongChange) {
-			audio.src = currentSong?.audioUrl;
-			// reset the playback position
-			audio.currentTime = 0;
+		const setupAudio = async () => {
+			try {
+				// Always check local storage first for better performance and offline support
+				const localBlob = await idbStorage.get(`audio-${currentSong._id}`);
+				
+				if (localBlob) {
+					blobUrl = URL.createObjectURL(localBlob);
+					audio.src = blobUrl;
+				} else {
+					audio.src = currentSong.audioUrl;
+				}
+			} catch (error) {
+				console.error("Failed to load local audio:", error);
+				audio.src = currentSong.audioUrl;
+			}
 
-			prevSongRef.current = currentSong?.audioUrl;
+			// reset the playback position ONLY if the song actually changed
+			if (prevSongRef.current !== currentSong._id) {
+				audio.currentTime = 0;
+				prevSongRef.current = currentSong._id;
+			}
 
-			if (isPlaying) audio.play();
-		}
-	}, [currentSong, isPlaying]);
+			if (isPlaying) {
+				audio.play().catch(err => console.error("Playback failed:", err));
+			}
+		};
+
+		setupAudio();
+
+		const handleError = () => {
+			console.error("Audio error occurred. Network probably disconnected.");
+		};
+		audio.addEventListener("error", handleError);
+
+		return () => {
+			audio.removeEventListener("error", handleError);
+			if (blobUrl) {
+				URL.revokeObjectURL(blobUrl);
+			}
+		};
+	}, [currentSong, isPlaying, isOffline]);
 
 	return <audio ref={audioRef} />;
 };

@@ -3,6 +3,7 @@ import axios from "axios";
 import { Album, Song, Stats } from "@/types";
 import toast from "react-hot-toast";
 import { create } from "zustand";
+import { idbStorage } from "@/lib/idb";
 
 interface MusicStore {
 	songs: Song[];
@@ -23,8 +24,11 @@ interface MusicStore {
 	downloadedSongs: Song[];
 	recommendations: Song[];
 	toggleLike: (song: Song) => void;
-	addDownload: (song: Song) => void;
+	addDownload: (song: Song) => Promise<void>;
+	removeDownload: (songId: string) => Promise<void>;
 	isLiked: (songId: string) => boolean;
+	isOffline: boolean;
+	setIsOffline: (isOffline: boolean) => void;
 
 	fetchAlbums: () => Promise<void>;
 	fetchAlbumById: (id: string) => Promise<void>;
@@ -58,6 +62,11 @@ export const useMusicStore = create<MusicStore>((set, get) => ({
 	featuredPlaylists: [],
 	recommendations: [],
 	currentSongDetails: null,
+	isOffline: !navigator.onLine,
+	setIsOffline: (isOffline) => set((state) => ({
+		isOffline,
+		isLoading: isOffline ? false : state.isLoading
+	})),
 	stats: {
 		totalSongs: 0,
 		totalAlbums: 0,
@@ -66,6 +75,7 @@ export const useMusicStore = create<MusicStore>((set, get) => ({
 	},
 
 	fetchSongById: async (id) => {
+		if (get().isOffline) return;
 		set({ isLoading: true, error: null });
 		try {
 			if (id.startsWith("jio-")) {
@@ -132,6 +142,7 @@ export const useMusicStore = create<MusicStore>((set, get) => ({
 	},
 
 	fetchSongs: async () => {
+		if (get().isOffline) return;
 		set({ isLoading: true, error: null });
 		try {
 			const response = await axiosInstance.get("/songs");
@@ -144,6 +155,7 @@ export const useMusicStore = create<MusicStore>((set, get) => ({
 	},
 
 	fetchRecommendations: async (songId: string) => {
+		if (get().isOffline) return;
 		set({ isLoading: true, error: null });
 		try {
 			const actualId = songId.startsWith("jio-") ? songId.replace("jio-", "") : songId;
@@ -171,6 +183,7 @@ export const useMusicStore = create<MusicStore>((set, get) => ({
 	},
 
 	fetchStats: async () => {
+		if (get().isOffline) return;
 		set({ isLoading: true, error: null });
 		try {
 			const response = await axiosInstance.get("/stats");
@@ -183,6 +196,7 @@ export const useMusicStore = create<MusicStore>((set, get) => ({
 	},
 
 	fetchAlbums: async () => {
+		if (get().isOffline) return;
 		set({ isLoading: true, error: null });
 
 		try {
@@ -196,6 +210,7 @@ export const useMusicStore = create<MusicStore>((set, get) => ({
 	},
 
 	fetchAlbumById: async (id) => {
+		if (get().isOffline) return;
 		set({ isLoading: true, error: null });
 		try {
 			if (id.startsWith("jio-playlist-")) {
@@ -238,6 +253,7 @@ export const useMusicStore = create<MusicStore>((set, get) => ({
 	},
 
 	fetchFeaturedSongs: async () => {
+		if (get().isOffline) return;
 		set({ isLoading: true, error: null });
 		try {
 			const response = await axios.get(`https://jiosavan-api-with-playlist.vercel.app/api/search/songs?query=new`);
@@ -264,6 +280,7 @@ export const useMusicStore = create<MusicStore>((set, get) => ({
 	},
 
 	fetchMadeForYouSongs: async () => {
+		if (get().isOffline) return;
 		set({ isLoading: true, error: null });
 		try {
 			// Fetching "most played" or popular songs
@@ -291,6 +308,7 @@ export const useMusicStore = create<MusicStore>((set, get) => ({
 	},
 
 	fetchTrendingSongs: async () => {
+		if (get().isOffline) return;
 		set({ isLoading: true, error: null });
 		try {
 			// Using a working instance to fetch trending/popular songs
@@ -318,6 +336,7 @@ export const useMusicStore = create<MusicStore>((set, get) => ({
 	},
 
 	fetchBollywoodSongs: async () => {
+		if (get().isOffline) return;
 		set({ isLoading: true, error: null });
 		try {
 			const response = await axios.get(`https://jiosavan-api-with-playlist.vercel.app/api/search/songs?query=bollywood`);
@@ -342,6 +361,7 @@ export const useMusicStore = create<MusicStore>((set, get) => ({
 	},
 
 	fetchPunjabiSongs: async () => {
+		if (get().isOffline) return;
 		set({ isLoading: true, error: null });
 		try {
 			const response = await axios.get(`https://jiosavan-api-with-playlist.vercel.app/api/search/songs?query=punjabi`);
@@ -366,6 +386,7 @@ export const useMusicStore = create<MusicStore>((set, get) => ({
 	},
 
 	fetchHollywoodSongs: async () => {
+		if (get().isOffline) return;
 		set({ isLoading: true, error: null });
 		try {
 			const response = await axios.get(`https://jiosavan-api-with-playlist.vercel.app/api/search/songs?query=hollywood`);
@@ -390,6 +411,7 @@ export const useMusicStore = create<MusicStore>((set, get) => ({
 	},
 
 	fetchFeaturedPlaylists: async () => {
+		if (get().isOffline) return;
 		set({ isLoading: true, error: null });
 		try {
 			const response = await axios.get(`https://jiosavan-api-with-playlist.vercel.app/api/search/playlists?query=featured`);
@@ -434,16 +456,58 @@ export const useMusicStore = create<MusicStore>((set, get) => ({
 		});
 	},
 
-	addDownload: (song) => {
-		set((state) => {
-			const isAlreadyDownloaded = state.downloadedSongs.some((s) => s._id === song._id);
-			if (!isAlreadyDownloaded) {
-				const newDownloadedSongs = [...state.downloadedSongs, song];
-				localStorage.setItem('downloaded-songs', JSON.stringify(newDownloadedSongs));
-				return { downloadedSongs: newDownloadedSongs };
-			}
-			return state;
-		});
+	addDownload: async (song) => {
+		const state = get();
+		const isAlreadyDownloaded = state.downloadedSongs.some((s) => s._id === song._id);
+		if (isAlreadyDownloaded) return;
+
+		set({ isLoading: true });
+		try {
+			// Fetch and store audio blob
+			const audioResponse = await axios.get(song.audioUrl, { responseType: 'blob' });
+			const audioBlob = audioResponse.data;
+			await idbStorage.put(`audio-${song._id}`, audioBlob);
+
+			// Also trigger file download to disk for the user
+			const url = window.URL.createObjectURL(audioBlob);
+			const a = document.createElement('a');
+			a.href = url;
+			a.download = `${song.title} - ${song.artist}.mp3`;
+			document.body.appendChild(a);
+			a.click();
+			window.URL.revokeObjectURL(url);
+			document.body.removeChild(a);
+
+			// Fetch and store image blob
+			const imageResponse = await axios.get(song.imageUrl, { responseType: 'blob' });
+			await idbStorage.put(`image-${song._id}`, imageResponse.data);
+
+			const newDownloadedSongs = [...state.downloadedSongs, song];
+			localStorage.setItem('downloaded-songs', JSON.stringify(newDownloadedSongs));
+			set({ downloadedSongs: newDownloadedSongs });
+			toast.success("Downloaded for offline playback");
+		} catch (error) {
+			console.error("Download failed:", error);
+			toast.error("Failed to download song");
+		} finally {
+			set({ isLoading: false });
+		}
+	},
+
+	removeDownload: async (songId) => {
+		const state = get();
+		try {
+			await idbStorage.delete(`audio-${songId}`);
+			await idbStorage.delete(`image-${songId}`);
+
+			const newDownloadedSongs = state.downloadedSongs.filter((s) => s._id !== songId);
+			localStorage.setItem('downloaded-songs', JSON.stringify(newDownloadedSongs));
+			set({ downloadedSongs: newDownloadedSongs });
+			toast.success("Removed from downloads");
+		} catch (error) {
+			console.error("Delete failed:", error);
+			toast.error("Failed to remove download");
+		}
 	},
 
 	isLiked: (songId: string) => {

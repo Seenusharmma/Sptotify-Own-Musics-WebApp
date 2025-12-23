@@ -4,12 +4,12 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import { useMusicStore } from "@/stores/useMusicStore";
 import { SignedIn } from "@clerk/clerk-react";
-import { HomeIcon, Library, MessageCircle, Search } from "lucide-react";
+import { Download, HomeIcon, Library, MessageCircle, Search } from "lucide-react";
 import { useEffect } from "react";
 import { Link } from "react-router-dom";
 
 const LeftSidebar = () => {
-	const { albums, fetchAlbums, isLoading, featuredPlaylists, fetchFeaturedPlaylists } = useMusicStore();
+	const { albums, fetchAlbums, isLoading, featuredPlaylists, fetchFeaturedPlaylists, downloadedSongs, likedSongs } = useMusicStore();
 
 	useEffect(() => {
 		fetchAlbums();
@@ -110,7 +110,20 @@ const LeftSidebar = () => {
 
                             <div className='flex-1 min-w-0 hidden md:block'>
                                 <p className='font-medium truncate'>Liked Songs</p>
-                                <p className='text-sm text-zinc-400 truncate'>Playlist • You</p>
+                                <p className='text-sm text-zinc-400 truncate'>Playlist • {likedSongs.length} songs</p>
+                            </div>
+                        </Link>
+                        <Link
+                            to={"/downloaded-songs"}
+                            className='p-2 hover:bg-zinc-800 rounded-md flex items-center gap-3 group cursor-pointer'
+                        >
+                             <div className="size-12 rounded-md flex items-center justify-center bg-gradient-to-br from-emerald-700 to-emerald-900 flex-shrink-0">
+                                <Download className="size-6 text-white" />
+                            </div>
+
+                            <div className='flex-1 min-w-0 hidden md:block'>
+                                <p className='font-medium truncate'>Downloads</p>
+                                <p className='text-sm text-zinc-400 truncate'>Local • {downloadedSongs.length} songs</p>
                             </div>
                         </Link>
 					</div>

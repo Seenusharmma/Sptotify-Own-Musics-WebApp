@@ -4,9 +4,71 @@ import { usePlayerStore } from "@/stores/usePlayerStore";
 import { Clock, Play, Pause, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { formatDuration } from "../album/AlbumPage";
+import { idbStorage } from "@/lib/idb";
+import { useEffect, useState } from "react";
+import { Trash2 } from "lucide-react";
+
+const DownloadItem = ({ song, index, isCurrentSong, isPlaying, handlePlaySong, removeDownload }: any) => {
+	const [imageUrl, setImageUrl] = useState<string>(song.imageUrl);
+
+	useEffect(() => {
+		const loadLocalImage = async () => {
+			const blob = await idbStorage.get(`image-${song._id}`);
+			if (blob) {
+				const url = URL.createObjectURL(blob);
+				setImageUrl(url);
+				return () => URL.revokeObjectURL(url);
+			}
+		};
+		loadLocalImage();
+	}, [song._id]);
+
+	return (
+		<div
+			className={`grid grid-cols-[16px_4fr_2fr_1fr] gap-4 px-4 py-2 text-sm 
+			text-zinc-400 hover:bg-white/5 rounded-md group cursor-pointer items-center`}
+		>
+			<div className='flex items-center justify-center' onClick={() => handlePlaySong(index)}>
+				{isCurrentSong && isPlaying ? (
+					<div className='size-4 text-green-500 font-bold'>♫</div>
+				) : (
+					<span className='group-hover:hidden'>{index + 1}</span>
+				)}
+				{!isCurrentSong && (
+					<Play className='h-4 w-4 hidden group-hover:block text-white translate-x-0.5' />
+				)}
+			</div>
+
+			<div className='flex items-center gap-3 min-w-0' onClick={() => handlePlaySong(index)}>
+				<img src={imageUrl} alt={song.title} className='size-10 rounded shadow-md object-cover flex-shrink-0' />
+				<div className="min-w-0 overflow-hidden">
+					<div className={`font-medium truncate ${isCurrentSong ? 'text-green-500' : 'text-white'}`}>{song.title}</div>
+					<div className="truncate text-zinc-400 text-xs">{song.artist}</div>
+				</div>
+			</div>
+			
+			<div className='flex items-center truncate' onClick={() => handlePlaySong(index)}>{song.albumId || 'Single'}</div>
+			
+			<div className='flex items-center justify-between pointer-events-none'>
+				<span className="group-hover:hidden">{formatDuration(song.duration)}</span>
+				<Button
+					size="icon"
+					variant="ghost"
+					className="hidden group-hover:flex h-8 w-8 text-zinc-400 hover:text-red-500 hover:bg-red-500/10 pointer-events-auto"
+					onClick={(e) => {
+						e.stopPropagation();
+						removeDownload(song._id);
+					}}
+				>
+					<Trash2 className="size-4" />
+				</Button>
+			</div>
+		</div>
+	);
+};
 
 const DownloadedSongsPage = () => {
-	const { downloadedSongs } = useMusicStore();
+	const { downloadedSongs, removeDownload } = useMusicStore();
 	const { currentSong, isPlaying, playAlbum, togglePlay } = usePlayerStore();
 
 	const handlePlayPlaylist = () => {
@@ -92,41 +154,17 @@ const DownloadedSongsPage = () => {
                                             No downloaded songs yet.
                                         </div>
                                     )}
-									{downloadedSongs.map((song, index) => {
-										const isCurrentSong = currentSong?._id === song._id;
-										return (
-											<div
-												key={song._id}
-												className={`grid grid-cols-[16px_4fr_2fr_1fr] gap-4 px-4 py-2 text-sm 
-                      text-zinc-400 hover:bg-white/5 rounded-md group cursor-pointer
-                      `}
-											>
-												<div className='flex items-center justify-center' onClick={() => handlePlaySong(index)}>
-													{isCurrentSong && isPlaying ? (
-														<div className='size-4 text-green-500'>♫</div>
-													) : (
-														<span className='group-hover:hidden'>{index + 1}</span>
-													)}
-													{!isCurrentSong && (
-														<Play className='h-4 w-4 hidden group-hover:block text-white' />
-													)}
-												</div>
-
-												<div className='flex items-center gap-3' onClick={() => handlePlaySong(index)}>
-													<img src={song.imageUrl} alt={song.title} className='size-10 rounded' />
-
-													<div>
-														<div className={`font-medium ${isCurrentSong ? 'text-green-500' : 'text-white'}`}>{song.title}</div>
-														<div>{song.artist}</div>
-													</div>
-												</div>
-												<div className='flex items-center'>{song.albumId || 'Single'}</div>
-												<div className='flex items-center justify-between'>
-                                                    {formatDuration(song.duration)}
-                                                </div>
-											</div>
-										);
-									})}
+									{downloadedSongs.map((song, index) => (
+										<DownloadItem 
+											key={song._id}
+											song={song}
+											index={index}
+											isCurrentSong={currentSong?._id === song._id}
+											isPlaying={isPlaying}
+											handlePlaySong={handlePlaySong}
+											removeDownload={removeDownload}
+										/>
+									))}
 								</div>
 							</div>
 						</div>
