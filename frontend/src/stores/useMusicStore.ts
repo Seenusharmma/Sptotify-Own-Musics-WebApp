@@ -4,6 +4,7 @@ import { Album, Song, Stats } from "@/types";
 import toast from "react-hot-toast";
 import { create } from "zustand";
 import { idbStorage } from "@/lib/idb";
+import { useSearchStore } from "./useSearchStore";
 
 interface MusicStore {
 	songs: Song[];
@@ -51,6 +52,10 @@ interface MusicStore {
 	fetchRecommendations: (songId: string) => Promise<void>;
 	deleteSong: (id: string) => Promise<void>;
 	deleteAlbum: (id: string) => Promise<void>;
+	fetchLikedSongs: () => Promise<void>;
+	fetchPlayHistory: () => Promise<void>;
+	updatePlayHistory: (songId: string) => Promise<void>;
+	fetchFeaturedPlay: () => Promise<void>;
 }
 
 export const useMusicStore = create<MusicStore>((set, get) => ({
@@ -520,26 +525,114 @@ export const useMusicStore = create<MusicStore>((set, get) => ({
 		}
 	},
 
-	likedSongs: JSON.parse(localStorage.getItem('liked-songs') || '[]'),
+	likedSongs: [],
 	downloadedSongs: JSON.parse(localStorage.getItem('downloaded-songs') || '[]'),
 
-	toggleLike: (song) => {
-		set((state) => {
-			const isAlreadyLiked = state.likedSongs.some((s) => s._id === song._id);
-			const newLikedSongs = isAlreadyLiked
-				? state.likedSongs.filter((s) => s._id !== song._id)
-				: [...state.likedSongs, song];
+	fetchLikedSongs: async () => {
+		set({ isLoading: true, error: null });
+		try {
+			const response = await axiosInstance.get("/users/liked-songs");
+			const likedIds: string[] = response.data;
 
-			localStorage.setItem('liked-songs', JSON.stringify(newLikedSongs));
-
-			if (isAlreadyLiked) {
-				toast.success("Removed from Liked Songs");
-			} else {
-				toast.success("Added to Liked Songs");
+			if (likedIds.length === 0) {
+				set({ likedSongs: [] });
+				return;
 			}
 
-			return { likedSongs: newLikedSongs };
-		});
+			// Split IDs into jio and local
+			const jioIds = likedIds.filter(id => id.startsWith("jio-")).map(id => id.replace("jio-", ""));
+			const localIds = likedIds.filter(id => !id.startsWith("jio-"));
+
+			let allSongs: Song[] = [];
+
+			// Fetch Jio songs in bulk if any
+			if (jioIds.length > 0) {
+				const jioResponse = await axios.get(`https://jiosavan-api-with-playlist.vercel.app/api/songs/${jioIds.join(",")}`);
+				const jioData = jioResponse.data.data;
+				if (Array.isArray(jioData)) {
+					allSongs = [...allSongs, ...jioData.map((songData: any) => ({
+						_id: `jio-${songData.id}`,
+						title: songData.name,
+						artist: Array.isArray(songData.artists?.primary) ? songData.artists.primary.map((a: any) => a.name).join(", ") : '',
+						albumId: null,
+						imageUrl: songData.image?.[songData.image.length - 1]?.url || '',
+						audioUrl: songData.downloadUrl?.[songData.downloadUrl.length - 1]?.url || '',
+						duration: songData.duration,
+						createdAt: new Date().toISOString(),
+						updatedAt: new Date().toISOString(),
+					}))];
+				}
+			}
+
+			// Fetch local songs one by one or implement bulk if backend supports it (currently one by one is easier as we have fetchSongById snippet)
+			for (const id of localIds) {
+				try {
+					const localRes = await axiosInstance.get(`/songs/${id}`);
+					allSongs.push(localRes.data);
+				} catch (err) {
+					console.error(`Failed to fetch local song ${id}`, err);
+				}
+			}
+
+			set({ likedSongs: allSongs });
+		} catch (error: any) {
+			console.error("Error fetching liked songs", error);
+			set({ error: error.message });
+		} finally {
+			set({ isLoading: false });
+		}
+	},
+
+	toggleLike: async (song) => {
+		const isAlreadyLiked = get().likedSongs.some((s) => s._id === song._id);
+
+		try {
+			if (isAlreadyLiked) {
+				await axiosInstance.delete(`/users/liked-songs/${song._id}`);
+				set((state) => ({
+					likedSongs: state.likedSongs.filter((s) => s._id !== song._id)
+				}));
+				toast.success("Removed from Liked Songs");
+			} else {
+				await axiosInstance.post("/users/liked-songs", { songId: song._id });
+				set((state) => ({
+					likedSongs: [...state.likedSongs, song]
+				}));
+				toast.success("Added to Liked Songs");
+			}
+		} catch (error: any) {
+			toast.error("Failed to update liked songs");
+			console.error("Error toggling like", error);
+		}
+	},
+
+	fetchPlayHistory: async () => {
+		try {
+			await axiosInstance.get("/users/play-history");
+			// History is an array of { song: string, playedAt: Date }
+			// This is just IDs, we might want to fetch details similarly to likedSongs or leave it for the UI to handle
+		} catch (error) {
+			console.error("Error fetching play history", error);
+		}
+	},
+
+	updatePlayHistory: async (songId: string) => {
+		try {
+			await axiosInstance.post("/users/play-history", { songId });
+			// Sync the search store's recentlyPlayed
+			useSearchStore.getState().fetchRecentlyPlayed();
+		} catch (error) {
+			console.error("Error updating play history", error);
+		}
+	},
+
+	fetchFeaturedPlay: async () => {
+		try {
+			await axiosInstance.get("/users/featured-play");
+			// Logic to handle featured play
+		} catch (error) {
+			console.error("Error fetching featured play", error);
+		}
 	},
 
 	addDownload: async (song) => {

@@ -6,9 +6,17 @@ import AudioPlayer from "./components/AudioPlayer";
 import { PlaybackControls } from "./components/PlaybackControls";
 import BottomNav from "./components/BottomNav";
 import { useEffect, useState } from "react";
+import { useUser } from "@clerk/clerk-react";
+import { useMusicStore } from "@/stores/useMusicStore";
+import { useSearchStore } from "@/stores/useSearchStore";
+import { useAuthStore } from "@/stores/useAuthStore";
 
 const MainLayout = () => {
 	const [isMobile, setIsMobile] = useState(false);
+	const { isLoaded, user } = useUser();
+	const { fetchLikedSongs } = useMusicStore();
+	const { fetchSearchHistory, fetchRecentlyPlayed } = useSearchStore();
+	const { checkAdminStatus } = useAuthStore();
 
 	useEffect(() => {
 		const checkMobile = () => {
@@ -19,6 +27,15 @@ const MainLayout = () => {
 		window.addEventListener("resize", checkMobile);
 		return () => window.removeEventListener("resize", checkMobile);
 	}, []);
+
+	useEffect(() => {
+		if (isLoaded && user) {
+			fetchLikedSongs();
+			fetchSearchHistory();
+			fetchRecentlyPlayed();
+			checkAdminStatus();
+		}
+	}, [isLoaded, user, fetchLikedSongs, fetchSearchHistory, fetchRecentlyPlayed, checkAdminStatus]);
 
 	return (
 		<div className='h-screen bg-black text-white flex flex-col'>

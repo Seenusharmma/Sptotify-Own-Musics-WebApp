@@ -74,11 +74,22 @@ export const usePlayerStore = create<PlayerStore>((set, get) => ({
 		}
 
 		const songIndex = get().queue.findIndex((s) => s._id === song._id);
-		set({
-			currentSong: song,
-			isPlaying: true,
-			currentIndex: songIndex !== -1 ? songIndex : get().currentIndex,
-		});
+
+		if (songIndex !== -1) {
+			set({
+				currentSong: song,
+				isPlaying: true,
+				currentIndex: songIndex,
+			});
+		} else {
+			// If song is not in queue, start a new queue with this song
+			set({
+				queue: [song],
+				currentSong: song,
+				isPlaying: true,
+				currentIndex: 0,
+			});
+		}
 	},
 
 	togglePlay: () => {

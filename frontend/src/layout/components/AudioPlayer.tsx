@@ -1,4 +1,5 @@
 import { usePlayerStore } from "@/stores/usePlayerStore";
+import { useMusicStore } from "@/stores/useMusicStore";
 import { useEffect, useRef } from "react";
 import { idbStorage } from "@/lib/idb";
 
@@ -7,6 +8,7 @@ const AudioPlayer = () => {
 	const prevSongRef = useRef<string | null>(null);
 
 	const { currentSong, isPlaying, playNext, autoPlayNext } = usePlayerStore();
+	const { updatePlayHistory } = useMusicStore();
 
 	// handle play/pause logic
 	useEffect(() => {
@@ -61,6 +63,9 @@ const AudioPlayer = () => {
 			// reset the playback position when the song changes
 			audio.currentTime = 0;
 			prevSongRef.current = currentSong._id;
+
+			// Update backend play history
+			updatePlayHistory(currentSong._id);
 
 			if (isPlaying) {
 				audio.play().catch(err => console.error("Playback failed:", err));

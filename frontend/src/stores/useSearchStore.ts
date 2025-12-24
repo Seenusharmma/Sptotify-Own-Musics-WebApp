@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import axios from "axios";
+import { axiosInstance } from "@/lib/axios";
 import { Album, Artist, Song } from "@/types";
 
 interface SearchStore {
@@ -20,33 +21,12 @@ interface SearchStore {
 	searchMulti: (query: string) => Promise<void>;
 	getSuggestions: (query: string) => Promise<void>;
 	addToRecentlyPlayed: (song: Song) => void;
+	fetchRecentlyPlayed: () => Promise<void>;
+	fetchSearchHistory: () => Promise<void>;
 	addToSearchHistory: (query: string) => void;
 	clearSearchHistory: () => void;
 }
 
-// Helper to safely parse localStorage
-const getRecentlyPlayed = (): Song[] => {
-	try {
-		const stored = localStorage.getItem("recentlyPlayed");
-		if (!stored) return [];
-		const parsed = JSON.parse(stored);
-		return Array.isArray(parsed) ? parsed : [];
-	} catch {
-		return [];
-	}
-};
-
-// Helper to get search history
-const getSearchHistory = (): string[] => {
-	try {
-		const stored = localStorage.getItem("searchHistory");
-		if (!stored) return [];
-		const parsed = JSON.parse(stored);
-		return Array.isArray(parsed) ? parsed : [];
-	} catch {
-		return [];
-	}
-};
 
 export const useSearchStore = create<SearchStore>((set, get) => ({
 	searchResults: [],
@@ -57,8 +37,8 @@ export const useSearchStore = create<SearchStore>((set, get) => ({
 		albums: [],
 		artists: [],
 	},
-	recentlyPlayed: getRecentlyPlayed(),
-	searchHistory: getSearchHistory(),
+	recentlyPlayed: [],
+	searchHistory: [],
 	isLoading: false,
 	isSuggestionsLoading: false,
 	error: null,
@@ -208,36 +188,103 @@ export const useSearchStore = create<SearchStore>((set, get) => ({
 		}
 	},
 
-	addToRecentlyPlayed: (song: Song) => {
+	addToRecentlyPlayed: async (song: Song) => {
 		const { recentlyPlayed } = get();
-		const safeRecent = Array.isArray(recentlyPlayed) ? recentlyPlayed : [];
-		const updatedRecent = [song, ...safeRecent.filter((s) => s._id !== song._id)].slice(0, 12);
+		const updatedRecent = [song, ...recentlyPlayed.filter((s) => s._id !== song._id)].slice(0, 12);
 		set({ recentlyPlayed: updatedRecent });
+
 		try {
-			localStorage.setItem("recentlyPlayed", JSON.stringify(updatedRecent));
+			// We already have updatePlayHistory in useMusicStore which updates the backend
+			// But for search store's recentlyPlayed, we can just ensure it's synced if needed
+			// Actually, updatePlayHistory in useMusicStore already updates recentPlay in the DB.
+			// So we just need to ensure the frontend reflects it.
 		} catch (error) {
-			console.error("Failed to save to localStorage:", error);
+			console.error("Failed to sync recently played:", error);
 		}
 	},
 
-	addToSearchHistory: (query: string) => {
+	fetchRecentlyPlayed: async () => {
+		try {
+			const response = await axiosInstance.get("/users/recent-play");
+			const recentIds: string[] = response.data;
+
+			if (recentIds.length === 0) {
+				set({ recentlyPlayed: [] });
+				return;
+			}
+
+			// Similar logic to fetchLikedSongs to get song details
+			const jioIds = recentIds.filter(id => id.startsWith("jio-")).map(id => id.replace("jio-", ""));
+			const localIds = recentIds.filter(id => !id.startsWith("jio-"));
+
+			let allSongs: Song[] = [];
+
+			if (jioIds.length > 0) {
+				const jioResponse = await axios.get(`https://jiosavan-api-with-playlist.vercel.app/api/songs/${jioIds.join(",")}`);
+				const jioData = jioResponse.data.data;
+				if (Array.isArray(jioData)) {
+					const mapped = jioData.map((songData: any) => ({
+						_id: `jio-${songData.id}`,
+						title: songData.name,
+						artist: Array.isArray(songData.artists?.primary) ? songData.artists.primary.map((a: any) => a.name).join(", ") : '',
+						albumId: null,
+						imageUrl: songData.image?.[songData.image.length - 1]?.url || '',
+						audioUrl: songData.downloadUrl?.[songData.downloadUrl.length - 1]?.url || '',
+						duration: songData.duration,
+						createdAt: new Date().toISOString(),
+						updatedAt: new Date().toISOString(),
+					}));
+					// Maintain the order of recentIds
+					allSongs = [...allSongs, ...mapped];
+				}
+			}
+
+			for (const id of localIds) {
+				try {
+					const localRes = await axiosInstance.get(`/songs/${id}`);
+					allSongs.push(localRes.data);
+				} catch (err) {
+					console.error(`Failed to fetch local song ${id}`, err);
+				}
+			}
+
+			// Sort allSongs according to the order in recentIds
+			const orderedSongs = recentIds.map(id => allSongs.find(s => s._id === id)).filter(Boolean) as Song[];
+
+			set({ recentlyPlayed: orderedSongs });
+		} catch (error) {
+			console.error("Failed to fetch recently played", error);
+		}
+	},
+
+	fetchSearchHistory: async () => {
+		try {
+			const response = await axiosInstance.get("/users/search-history");
+			// Map [{query, searchedAt}] to [query]
+			const history = response.data.map((item: any) => item.query);
+			set({ searchHistory: history });
+		} catch (error) {
+			console.error("Failed to fetch search history", error);
+		}
+	},
+
+	addToSearchHistory: async (query: string) => {
 		const { searchHistory } = get();
-		const safeHistory = Array.isArray(searchHistory) ? searchHistory : [];
-		const updatedHistory = [query, ...safeHistory.filter((q) => q !== query)].slice(0, 10);
+		const updatedHistory = [query, ...searchHistory.filter((q) => q !== query)].slice(0, 10);
 		set({ searchHistory: updatedHistory });
 		try {
-			localStorage.setItem("searchHistory", JSON.stringify(updatedHistory));
+			await axiosInstance.post("/users/search-history", { query });
 		} catch (error) {
-			console.error("Failed to save search history:", error);
+			console.error("Failed to add to search history", error);
 		}
 	},
 
-	clearSearchHistory: () => {
+	clearSearchHistory: async () => {
 		set({ searchHistory: [] });
 		try {
-			localStorage.removeItem("searchHistory");
+			await axiosInstance.delete("/users/search-history");
 		} catch (error) {
-			console.error("Failed to clear search history:", error);
+			console.error("Failed to clear search history", error);
 		}
 	},
 }));
