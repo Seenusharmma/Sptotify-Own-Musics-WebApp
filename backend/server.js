@@ -55,6 +55,10 @@ app.use("/albums", albumRoutes);
 app.use("/stats", statRoutes);
 app.use("/users", userRoutes);
 
+app.get("/", (req, res) => {
+    res.send("Backend is up and running!");
+});
+
 // error handler middleware
 app.use((err, req, res, next) => {
 	res.status(500).json({ message: process.env.NODE_ENV === "production" ? "Internal server error" : err.message });
