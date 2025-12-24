@@ -23,7 +23,7 @@ const PORT = process.env.PORT || 5000;
 
 app.use(cors(
     {
-        origin: "https://sptotifyfreesongs.vercel.app",
+        origin: ["http://localhost:3000", "http://localhost:5173", "https://sptotifyfreesongs.vercel.app"],
         credentials: true
     }
 ));
