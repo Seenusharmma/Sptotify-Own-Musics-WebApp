@@ -1,6 +1,7 @@
 import { SignedOut, UserButton } from "@clerk/clerk-react";
 import { LayoutDashboardIcon, Search } from "lucide-react";
 import { Link } from "react-router-dom";
+import { motion } from "framer-motion";
 import SignInOAuthButtons from "./SignInOAuthButtons";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { cn } from "@/lib/utils";
@@ -8,45 +9,75 @@ import { buttonVariants } from "./ui/button";
 
 const Topbar = () => {
 	const { isAdmin } = useAuthStore();
-	console.log({ isAdmin });
 
 	return (
-		<div
-			className='flex items-center justify-between p-4 sticky top-0 bg-zinc-900/75 
-      backdrop-blur-md z-10
-    '
-		>
-			<div className='flex gap-2 items-center'>
-				<img src='/spotify.png' className='size-8' alt='Spotify logo' />
-				<span className='hidden sm:inline'>Spotify</span>
-			</div>
-			<div className='flex items-center gap-4'>
-				<Link
-					to={"/search"}
-					className={cn(
-						buttonVariants({ variant: "outline" }),
-						"hidden"
-					)}
+		<header className="sticky top-2 z-50">
+			<div
+				className="
+					mx-3 md:mx-6
+					flex items-center justify-between
+					rounded-full
+					bg-zinc-900/70
+					backdrop-blur-xl
+					border border-white/10
+					px-5 py-3
+					transition-all duration-300
+					hover:bg-zinc-900/85
+				"
+			>
+				{/* Logo + Brand (Animated) */}
+				<motion.div
+					className="flex items-center gap-2 cursor-pointer"
+					initial={{ x: 80, opacity: 0 }}
+					animate={{ x: 0, opacity: 1 }}
+					transition={{ duration: 0.8, ease: "easeOut" }}
 				>
-					<Search className='size-5' />
-				</Link>
+					<img
+						src="/spotify.png"
+						alt="Spotify logo"
+						className="size-8"
+					/>
+					<span className="text-lg font-bold tracking-wide">
+						Spotify
+					</span>
+				</motion.div>
 
-				{isAdmin && (
-					<Link to={"/admin"} className={cn(buttonVariants({ variant: "outline" }), "hidden md:flex")}>
-						<LayoutDashboardIcon className='size-4  mr-2' />
-						Admin Dashboard
-					</Link>
-				)}
+				{/* Actions */}
+				<div className="flex items-center gap-2 md:gap-4">
 
-				<SignedOut>
-					<SignInOAuthButtons />
-				</SignedOut>
+					{/* Admin */}
+					{isAdmin && (
+						<Link
+							to="/admin"
+							className={cn(
+								buttonVariants({ variant: "secondary" }),
+								"hidden md:flex items-center gap-2 font-medium"
+							)}
+						>
+							<LayoutDashboardIcon className="size-4" />
+							Admin
+						</Link>
+					)}
 
-				<div className="hidden md:block">
-				<UserButton />
+					{/* Auth */}
+					<SignedOut>
+						<SignInOAuthButtons />
+					</SignedOut>
+
+					{/* User */}
+					<div className="hidden md:flex">
+						<UserButton
+							appearance={{
+								elements: {
+									avatarBox: "ring-2 ring-white/20",
+								},
+							}}
+						/>
+					</div>
+				</div>
 			</div>
-			</div>
-		</div>
+		</header>
 	);
 };
+
 export default Topbar;
