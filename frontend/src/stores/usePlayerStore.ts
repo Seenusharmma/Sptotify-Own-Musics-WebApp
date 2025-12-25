@@ -16,7 +16,7 @@ interface PlayerStore {
 	setCurrentSong: (song: Song | null) => void;
 	togglePlay: () => void;
 	toggleShuffle: () => void;
-	playNext: () => void;
+	playNext: () => Promise<void>;
 	playPrevious: () => void;
 	toggleAutoPlay: () => void;
 }
@@ -137,8 +137,8 @@ export const usePlayerStore = create<PlayerStore>((set, get) => ({
 		}
 	},
 
-	playNext: () => {
-		const { currentIndex, queue } = get();
+	playNext: async () => {
+		const { currentIndex, queue, autoPlayNext, currentSong } = get();
 		const nextIndex = currentIndex + 1;
 
 		// if there is a next song to play, let's play it
@@ -160,6 +160,40 @@ export const usePlayerStore = create<PlayerStore>((set, get) => ({
 			});
 		} else {
 			// no next song
+			if (autoPlayNext && currentSong) {
+				// Fetch recommendations
+				try {
+					// Dynamic import to avoid circular dependency issues if any
+					const { useMusicStore } = await import("./useMusicStore");
+					await useMusicStore.getState().fetchRecommendations(currentSong._id);
+					const recommendations = useMusicStore.getState().recommendations;
+
+					if (recommendations.length > 0) {
+						const newQueue = [...queue, ...recommendations];
+						const nextSong = newQueue[nextIndex];
+
+						const socket = useChatStore.getState().socket;
+						if (socket.auth) {
+							socket.emit("update_activity", {
+								userId: socket.auth.userId,
+								activity: `Playing ${nextSong.title} by ${nextSong.artist}`,
+							});
+						}
+
+						set({
+							queue: newQueue,
+							currentSong: nextSong,
+							currentIndex: nextIndex,
+							isPlaying: true,
+						});
+						return;
+					}
+				} catch (error) {
+					console.error("Failed to fetch autoplay recommendations", error);
+				}
+			}
+
+			// if autoplay failed or is disabled
 			set({ isPlaying: false });
 
 			const socket = useChatStore.getState().socket;
