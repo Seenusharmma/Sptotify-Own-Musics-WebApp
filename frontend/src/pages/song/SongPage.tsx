@@ -205,10 +205,10 @@ const SongPage = () => {
                         variant="ghost"
                         size="icon"
                         className={`w-12 h-12 rounded-full border border-white/10 hover:bg-white/5 
-                        ${isLiked(currentSongDetails._id) ? "text-emerald-500" : "text-zinc-400 hover:text-white"}`}
+                        ${isLiked(currentSongDetails._id) ? "text-red-500" : "text-zinc-400 hover:text-white"}`}
                         title="Like"
                     >
-                        <Heart className={`w-6 h-6 ${isLiked(currentSongDetails._id) ? "fill-emerald-500" : ""}`} />
+                        <Heart className={`w-6 h-6 ${isLiked(currentSongDetails._id) ? "fill-red-500" : ""}`} />
                     </Button>
 
                     <Button

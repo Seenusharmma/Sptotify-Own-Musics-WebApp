@@ -4,6 +4,11 @@ export const getUserPlaylists = async (req, res, next) => {
 	try {
 		const userId = req.auth.userId;
 		const user = await User.findOne({ clerkId: userId });
+
+		if (!user) {
+			return res.status(404).json({ message: "User not found" });
+		}
+
 		res.status(200).json(user.likedSongs);
 	} catch (error) {
 		next(error);
@@ -16,6 +21,11 @@ export const addToLikedSongs = async (req, res, next) => {
 		const { songId } = req.body;
 
 		const user = await User.findOne({ clerkId: userId });
+
+		if (!user) {
+			return res.status(404).json({ message: "User not found" });
+		}
+
 		if (!user.likedSongs.includes(songId)) {
 			user.likedSongs.push(songId);
 			await user.save();
@@ -33,6 +43,11 @@ export const removeFromLikedSongs = async (req, res, next) => {
 		const { songId } = req.params;
 
 		const user = await User.findOne({ clerkId: userId });
+
+		if (!user) {
+			return res.status(404).json({ message: "User not found" });
+		}
+
 		user.likedSongs = user.likedSongs.filter((id) => id.toString() !== songId);
 		await user.save();
 
@@ -46,6 +61,11 @@ export const getPlayHistory = async (req, res, next) => {
 	try {
 		const userId = req.auth.userId;
 		const user = await User.findOne({ clerkId: userId });
+
+		if (!user) {
+			return res.status(404).json({ message: "User not found" });
+		}
+
 		res.status(200).json(user.playHistory);
 	} catch (error) {
 		next(error);
@@ -56,6 +76,11 @@ export const getRecentPlay = async (req, res, next) => {
 	try {
 		const userId = req.auth.userId;
 		const user = await User.findOne({ clerkId: userId });
+
+		if (!user) {
+			return res.status(404).json({ message: "User not found" });
+		}
+
 		res.status(200).json(user.recentPlay);
 	} catch (error) {
 		next(error);
@@ -68,6 +93,11 @@ export const addToPlayHistory = async (req, res, next) => {
 		const { songId } = req.body;
 
 		const user = await User.findOne({ clerkId: userId });
+
+		if (!user) {
+			return res.status(404).json({ message: "User not found" });
+		}
+
 		user.playHistory.unshift({ song: songId });
 		// Limit history to 50 items
 		if (user.playHistory.length > 50) {
@@ -90,6 +120,11 @@ export const getSearchHistory = async (req, res, next) => {
 	try {
 		const userId = req.auth.userId;
 		const user = await User.findOne({ clerkId: userId });
+
+		if (!user) {
+			return res.status(404).json({ message: "User not found" });
+		}
+
 		res.status(200).json(user.searchHistory);
 	} catch (error) {
 		next(error);
@@ -102,6 +137,11 @@ export const addToSearchHistory = async (req, res, next) => {
 		const { query } = req.body;
 
 		const user = await User.findOne({ clerkId: userId });
+
+		if (!user) {
+			return res.status(404).json({ message: "User not found" });
+		}
+
 		user.searchHistory.unshift({ query });
 		if (user.searchHistory.length > 20) {
 			user.searchHistory.pop();
@@ -117,6 +157,11 @@ export const clearSearchHistory = async (req, res, next) => {
 	try {
 		const userId = req.auth.userId;
 		const user = await User.findOne({ clerkId: userId });
+
+		if (!user) {
+			return res.status(404).json({ message: "User not found" });
+		}
+
 		user.searchHistory = [];
 		await user.save();
 		res.status(200).json({ message: "Search history cleared" });
@@ -129,6 +174,11 @@ export const getFeaturedPlay = async (req, res, next) => {
 	try {
 		const userId = req.auth.userId;
 		const user = await User.findOne({ clerkId: userId });
+
+		if (!user) {
+			return res.status(404).json({ message: "User not found" });
+		}
+
 		res.status(200).json(user.featuredPlay);
 	} catch (error) {
 		next(error);

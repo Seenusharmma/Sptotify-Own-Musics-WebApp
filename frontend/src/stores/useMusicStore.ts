@@ -27,6 +27,7 @@ interface MusicStore {
 	jioOriginals: Song[];
 	trendingAlbums: Album[];
 	arijitAlbums: Album[];
+	radioSongs: Song[];
 	toggleLike: (song: Song) => void;
 	addDownload: (song: Song) => Promise<void>;
 	removeDownload: (songId: string) => Promise<void>;
@@ -47,6 +48,7 @@ interface MusicStore {
 	fetchJioOriginals: () => Promise<void>;
 	fetchTrendingAlbums: () => Promise<void>;
 	fetchArijitAlbums: () => Promise<void>;
+	fetchRadioSongs: () => Promise<void>;
 	fetchStats: () => Promise<void>;
 	fetchSongs: () => Promise<void>;
 	fetchRecommendations: (songId: string) => Promise<void>;
@@ -75,6 +77,7 @@ export const useMusicStore = create<MusicStore>((set, get) => ({
 	jioOriginals: [],
 	trendingAlbums: [],
 	arijitAlbums: [],
+	radioSongs: [],
 	currentSongDetails: null,
 	isOffline: !navigator.onLine,
 	setIsOffline: (isOffline) => set((state) => ({
@@ -520,6 +523,33 @@ export const useMusicStore = create<MusicStore>((set, get) => ({
 			set({ arijitAlbums: mappedAlbums });
 		} catch (error: any) {
 			set({ error: error.response?.data?.message || "Failed to fetch Arijit albums", arijitAlbums: [] });
+		} finally {
+			set({ isLoading: false });
+		}
+	},
+
+	fetchRadioSongs: async () => {
+		if (get().isOffline) return;
+		set({ isLoading: true, error: null });
+		try {
+			const response = await axios.get(`https://jiosavan-api-with-playlist.vercel.app/api/search/songs?query=90s bollywood hits`);
+			const data = response.data?.data?.results;
+
+			const mappedSongs: Song[] = Array.isArray(data) ? data.map((song: any) => ({
+				_id: `jio-${song.id}`,
+				title: song.name,
+				artist: Array.isArray(song.artists?.primary) ? song.artists.primary.map((a: any) => a.name).join(", ") : '',
+				albumId: null,
+				imageUrl: song.image?.[song.image.length - 1]?.url || '',
+				audioUrl: song.downloadUrl?.[song.downloadUrl.length - 1]?.url || '',
+				duration: song.duration,
+				createdAt: new Date().toISOString(),
+				updatedAt: new Date().toISOString(),
+			})) : [];
+
+			set({ radioSongs: mappedSongs });
+		} catch (error: any) {
+			set({ error: error.response?.data?.message || "Failed to fetch Radio songs", radioSongs: [] });
 		} finally {
 			set({ isLoading: false });
 		}

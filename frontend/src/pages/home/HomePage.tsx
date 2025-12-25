@@ -34,9 +34,11 @@ const HomePage = () => {
     fetchJioOriginals,
     fetchTrendingAlbums,
     fetchArijitAlbums,
+    fetchRadioSongs,
     jioOriginals,
     trendingAlbums,
     arijitAlbums,
+    radioSongs,
   } = useMusicStore();
 
   const { recentlyPlayed } = useSearchStore();
@@ -55,7 +57,8 @@ const HomePage = () => {
     fetchJioOriginals();
     fetchTrendingAlbums();
     fetchArijitAlbums();
-  }, [isOffline, fetchFeaturedSongs, fetchMadeForYouSongs, fetchTrendingSongs, fetchBollywoodSongs, fetchPunjabiSongs, fetchHollywoodSongs, fetchJioOriginals, fetchTrendingAlbums, fetchArijitAlbums]);
+    fetchRadioSongs();
+  }, [isOffline, fetchFeaturedSongs, fetchMadeForYouSongs, fetchTrendingSongs, fetchBollywoodSongs, fetchPunjabiSongs, fetchHollywoodSongs, fetchJioOriginals, fetchTrendingAlbums, fetchArijitAlbums, fetchRadioSongs]);
 
   // Initialize queue
   useEffect(() => {
@@ -66,6 +69,7 @@ const HomePage = () => {
     const safeBollywoodSongs = Array.isArray(bollywoodSongs) ? bollywoodSongs : [];
     const safePunjabiSongs = Array.isArray(punjabiSongs) ? punjabiSongs : [];
     const safeHollywoodSongs = Array.isArray(hollywoodSongs) ? hollywoodSongs : [];
+    const safeRadioSongs = Array.isArray(radioSongs) ? radioSongs : [];
 
     const allSongs = [
       ...safeFeaturedSongs,
@@ -74,6 +78,7 @@ const HomePage = () => {
       ...safeBollywoodSongs,
       ...safePunjabiSongs,
       ...safeHollywoodSongs,
+      ...safeRadioSongs,
     ];
     if (allSongs.length) initializeQueue(allSongs);
   }, [
@@ -83,6 +88,7 @@ const HomePage = () => {
     bollywoodSongs,
     punjabiSongs,
     hollywoodSongs,
+    radioSongs,
     initializeQueue,
   ]);
 
@@ -157,6 +163,12 @@ const HomePage = () => {
                 <SectionGrid
                   title='JioSaavn Originals'
                   songs={jioOriginals}
+                  isLoading={isLoading}
+                />
+
+                <SectionGrid
+                  title='Radio Station (90s Hits)'
+                  songs={radioSongs}
                   isLoading={isLoading}
                 />
 

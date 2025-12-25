@@ -1,4 +1,4 @@
-import { Search as SearchIcon, X, Clock } from "lucide-react";
+import { Search as SearchIcon, X, Clock, Mic } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useSearchStore } from "@/stores/useSearchStore";
 import { useState, useRef, useEffect } from "react";
@@ -14,6 +14,7 @@ const SearchBar = ({ value, onChange, onSearch }: SearchBarProps) => {
 	const { suggestions, searchHistory, getSuggestions, isSuggestionsLoading, clearSearchHistory } = useSearchStore();
 	const [showSuggestions, setShowSuggestions] = useState(false);
 	const [selectedIndex, setSelectedIndex] = useState(-1);
+	const [isListening, setIsListening] = useState(false);
 	const inputRef = useRef<HTMLInputElement>(null);
 	const navigate = useNavigate();
 
@@ -26,6 +27,67 @@ const SearchBar = ({ value, onChange, onSearch }: SearchBarProps) => {
 		}, 300);
 		return () => clearTimeout(timer);
 	}, [value, getSuggestions]);
+
+    const recognitionRef = useRef<any>(null);
+
+    const handleVoiceSearch = () => {
+		if (isListening) return;
+
+        const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+        if (!SpeechRecognition) {
+            alert("Your browser does not support voice search.");
+            return;
+        }
+
+        const recognition = new SpeechRecognition();
+        recognitionRef.current = recognition;
+        
+        recognition.lang = "en-US";
+        recognition.continuous = false;
+        recognition.interimResults = false;
+
+        recognition.onstart = () => {
+             setIsListening(true);
+        };
+
+        recognition.onresult = (event: any) => {
+            const transcript = event.results[0][0].transcript;
+            onChange(transcript);
+            onSearch(transcript);
+        };
+
+        recognition.onerror = (event: any) => {
+            console.error("Speech recognition error", event.error);
+            setIsListening(false);
+            if (event.error === 'not-allowed') {
+                alert("Microphone access denied. Please allow microphone access in your browser settings.");
+            } else if (event.error === 'no-speech') {
+                alert("No speech was detected. Please try again.");
+            } else {
+                 alert(`Voice search error: ${event.error}`);
+            }
+        };
+        
+        recognition.onend = () => {
+            setIsListening(false);
+        };
+
+        try {
+            recognition.start();
+        } catch (error) {
+            console.error("Error starting recognition:", error);
+            setIsListening(false);
+        }
+    };
+
+    // Cleanup on unmount
+    useEffect(() => {
+        return () => {
+            if (recognitionRef.current) {
+                recognitionRef.current.stop();
+            }
+        };
+    }, []);
 
 	// Flat list of suggestions for keyboard navigation
 	const flatSuggestions = [
@@ -103,17 +165,17 @@ const SearchBar = ({ value, onChange, onSearch }: SearchBarProps) => {
 				<SearchIcon className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-zinc-400 pointer-events-none" />
 				<Input
 					ref={inputRef}
-					placeholder="What do you want to listen to?"
+					placeholder={isListening ? "Listening..." : "What do you want to listen to?"}
 					value={value}
 					onChange={(e) => onChange(e.target.value)}
 					onFocus={() => setShowSuggestions(true)}
 					onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
 					onKeyDown={handleKeyDown}
-					className="pl-12 pr-12 h-14 bg-zinc-800/50 border-none text-base rounded-full 
+					className={`pl-12 pr-12 h-14 bg-zinc-800/50 border-none text-base rounded-full 
 						focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:bg-zinc-800
-						transition-all duration-200"
+						transition-all duration-200 ${isListening ? "ring-2 ring-emerald-500 animate-pulse" : ""}`}
 				/>
-				{value && (
+				{value ? (
 					<button
 						onClick={() => {
 							onChange("");
@@ -125,7 +187,16 @@ const SearchBar = ({ value, onChange, onSearch }: SearchBarProps) => {
 					>
 						<X className="h-4 w-4" />
 					</button>
-				)}
+				) : (
+                    <button
+						onClick={handleVoiceSearch}
+						className={`absolute right-4 top-1/2 -translate-y-1/2 h-6 w-6 
+							flex items-center justify-center rounded-full hover:bg-zinc-700
+							transition-colors ${isListening ? "text-emerald-500 bg-zinc-700" : "text-zinc-400"}`}
+					>
+						<Mic className="h-5 w-5" />
+					</button>
+                )}
 			</div>
 
 			{/* Suggestions Dropdown */}
