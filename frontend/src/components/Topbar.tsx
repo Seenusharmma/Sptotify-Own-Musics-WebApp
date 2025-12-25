@@ -1,5 +1,5 @@
 import { SignedOut, UserButton } from "@clerk/clerk-react";
-import { LayoutDashboardIcon, Search } from "lucide-react";
+import { LayoutDashboardIcon } from "lucide-react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import SignInOAuthButtons from "./SignInOAuthButtons";
