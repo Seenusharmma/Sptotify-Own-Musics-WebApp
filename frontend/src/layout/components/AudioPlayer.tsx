@@ -7,7 +7,7 @@ const AudioPlayer = () => {
 	const audioRef = useRef<HTMLAudioElement>(null);
 	const prevSongRef = useRef<string | null>(null);
 
-	const { currentSong, isPlaying, playNext, autoPlayNext } = usePlayerStore();
+	const { currentSong, isPlaying, playNext, autoPlayNext, isRepeating } = usePlayerStore();
 	const { updatePlayHistory } = useMusicStore();
 
 	// handle play/pause logic
@@ -87,6 +87,6 @@ const AudioPlayer = () => {
 		};
 	}, [currentSong]);
 
-	return <audio ref={audioRef} />;
+	return <audio ref={audioRef} loop={isRepeating} />;
 };
 export default AudioPlayer;

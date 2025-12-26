@@ -10,6 +10,7 @@ interface PlayerStore {
 	currentIndex: number;
 	autoPlayNext: boolean;
 	isShuffled: boolean;
+	isRepeating: boolean;
 
 	initializeQueue: (songs: Song[]) => void;
 	playAlbum: (songs: Song[], startIndex?: number) => void;
@@ -19,6 +20,7 @@ interface PlayerStore {
 	playNext: () => Promise<void>;
 	playPrevious: () => void;
 	toggleAutoPlay: () => void;
+	toggleRepeat: () => void;
 }
 
 export const usePlayerStore = create<PlayerStore>((set, get) => ({
@@ -29,6 +31,7 @@ export const usePlayerStore = create<PlayerStore>((set, get) => ({
 	currentIndex: -1,
 	autoPlayNext: true,
 	isShuffled: false,
+	isRepeating: false,
 
 	initializeQueue: (songs: Song[]) => {
 		set({
@@ -242,5 +245,9 @@ export const usePlayerStore = create<PlayerStore>((set, get) => ({
 
 	toggleAutoPlay: () => {
 		set({ autoPlayNext: !get().autoPlayNext });
+	},
+
+	toggleRepeat: () => {
+		set({ isRepeating: !get().isRepeating });
 	},
 }));

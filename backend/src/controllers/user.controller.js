@@ -20,15 +20,16 @@ export const addToLikedSongs = async (req, res, next) => {
 		const userId = req.auth.userId;
 		const { songId } = req.body;
 
-		const user = await User.findOne({ clerkId: userId });
+		// Use $addToSet to atomically add without duplicates and avoid race conditions
+		// new: true retrieves the updated document
+		const user = await User.findOneAndUpdate(
+			{ clerkId: userId },
+			{ $addToSet: { likedSongs: songId } },
+			{ new: true }
+		);
 
 		if (!user) {
 			return res.status(404).json({ message: "User not found" });
-		}
-
-		if (!user.likedSongs.includes(songId)) {
-			user.likedSongs.push(songId);
-			await user.save();
 		}
 
 		res.status(200).json(user.likedSongs);
@@ -42,14 +43,16 @@ export const removeFromLikedSongs = async (req, res, next) => {
 		const userId = req.auth.userId;
 		const { songId } = req.params;
 
-		const user = await User.findOne({ clerkId: userId });
+		// Use $pull to atomically remove the songId
+		const user = await User.findOneAndUpdate(
+			{ clerkId: userId },
+			{ $pull: { likedSongs: songId } },
+			{ new: true }
+		);
 
 		if (!user) {
 			return res.status(404).json({ message: "User not found" });
 		}
-
-		user.likedSongs = user.likedSongs.filter((id) => id.toString() !== songId);
-		await user.save();
 
 		res.status(200).json(user.likedSongs);
 	} catch (error) {

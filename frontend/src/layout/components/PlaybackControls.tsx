@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { usePlayerStore } from "@/stores/usePlayerStore";
-import { Laptop2, ListMusic, Mic2, Pause, Play, Shuffle, SkipBack, SkipForward, Volume1, WifiOff } from "lucide-react";
+import { Laptop2, ListMusic, Mic2, Pause, Play, Repeat, Shuffle, SkipBack, SkipForward, Volume1, WifiOff } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
@@ -16,7 +16,7 @@ const formatTime = (seconds: number) => {
 
 export const PlaybackControls = () => {
 	const navigate = useNavigate();
-	const { currentSong, isPlaying, togglePlay, playNext, playPrevious, autoPlayNext, toggleAutoPlay, isShuffled, toggleShuffle } = usePlayerStore();
+	const { currentSong, isPlaying, togglePlay, playNext, playPrevious, autoPlayNext, toggleAutoPlay, isShuffled, toggleShuffle, isRepeating, toggleRepeat } = usePlayerStore();
 	const { isOffline } = useMusicStore();
 
 	const [volume, setVolume] = useState(75);
@@ -77,7 +77,7 @@ export const PlaybackControls = () => {
 	};
 
 	return (
-		<footer className='h-20 sm:h-24 bg-zinc-900 border-t border-zinc-800 px-4 fixed bottom-16 md:bottom-0 left-0 right-0 z-50'>
+		<footer className='h-20 sm:h-24 bg-zinc-900 border-t border-zinc-800 px-4 fixed bottom-16 md:bottom-0 left-0 right-0 z-50 mb-5 rounded-3xl overflow-hidden'>
 			<div className='flex justify-between items-center h-full max-w-[1800px] mx-auto gap-4'>
 				{/* currently playing song */}
 				<div className='flex items-center gap-3 min-w-0 flex-1 sm:flex-none sm:min-w-[180px] sm:w-[30%]'>
@@ -104,7 +104,7 @@ export const PlaybackControls = () => {
 				</div>
 
 				{/* player controls*/}
-				<div className='flex flex-col items-center gap-1 sm:gap-2 flex-none sm:flex-1 sm:max-w-[45%]'>
+				<div className='flex flex-col items-center gap-1 sm:gap-2 flex-none sm:flex-1 sm:max-w-[45%] '>
 					<div className='flex items-center gap-3 sm:gap-6'>
 						<Button
 							size='icon'
@@ -145,6 +145,19 @@ export const PlaybackControls = () => {
 							disabled={!currentSong}
 						>
 							<SkipForward className='h-4 w-4' />
+						</Button>
+
+						<Button
+							size='icon'
+							variant='ghost'
+							onClick={toggleRepeat}
+							className={cn(
+								"hover:text-white transition-colors h-8 w-8",
+								isRepeating ? "text-emerald-500" : "text-zinc-400"
+							)}
+							title={isRepeating ? 'Repeat: ON' : 'Repeat: OFF'}
+						>
+							<Repeat className='h-4 w-4' />
 						</Button>
 						<Button
 							size='icon'

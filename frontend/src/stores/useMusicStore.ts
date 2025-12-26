@@ -614,23 +614,29 @@ export const useMusicStore = create<MusicStore>((set, get) => ({
 	},
 
 	toggleLike: async (song) => {
-		const isAlreadyLiked = get().likedSongs.some((s) => s._id === song._id);
+		const state = get();
+		const isAlreadyLiked = state.likedSongs.some((s) => s._id === song._id);
+
+		// Optimistic update
+		const previousLikedSongs = state.likedSongs;
+
+		if (isAlreadyLiked) {
+			set({ likedSongs: state.likedSongs.filter((s) => s._id !== song._id) });
+		} else {
+			set({ likedSongs: [...state.likedSongs, song] });
+		}
 
 		try {
 			if (isAlreadyLiked) {
 				await axiosInstance.delete(`/users/liked-songs/${song._id}`);
-				set((state) => ({
-					likedSongs: state.likedSongs.filter((s) => s._id !== song._id)
-				}));
 				toast.success("Removed from Liked Songs");
 			} else {
 				await axiosInstance.post("/users/liked-songs", { songId: song._id });
-				set((state) => ({
-					likedSongs: [...state.likedSongs, song]
-				}));
 				toast.success("Added to Liked Songs");
 			}
 		} catch (error: any) {
+			// Revert state if failed
+			set({ likedSongs: previousLikedSongs });
 			toast.error("Failed to update liked songs");
 			console.error("Error toggling like", error);
 		}
