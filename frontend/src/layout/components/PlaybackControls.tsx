@@ -1,259 +1,268 @@
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
+import { cn } from "@/lib/utils";
 import { usePlayerStore } from "@/stores/usePlayerStore";
-import { Laptop2, ListMusic, Mic2, Pause, Play, Repeat, Shuffle, SkipBack, SkipForward, Volume1, WifiOff } from "lucide-react";
+import { useMusicStore } from "@/stores/useMusicStore";
+import {
+  Laptop2,
+  ListMusic,
+  Mic2,
+  Pause,
+  Play,
+  Repeat,
+  Shuffle,
+  SkipBack,
+  SkipForward,
+  Volume1,
+  WifiOff,
+} from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { cn } from "@/lib/utils";
-import { useMusicStore } from "@/stores/useMusicStore";
 import { idbStorage } from "@/lib/idb";
 
-const formatTime = (seconds: number) => {
-	const minutes = Math.floor(seconds / 60);
-	const remainingSeconds = Math.floor(seconds % 60);
-	return `${minutes}:${remainingSeconds.toString().padStart(2, "0")}`;
+/* ---------------- Utils ---------------- */
+const formatTime = (sec: number) => {
+  if (!sec || isNaN(sec)) return "0:00";
+  const m = Math.floor(sec / 60);
+  const s = Math.floor(sec % 60);
+  return `${m}:${s.toString().padStart(2, "0")}`;
 };
 
 export const PlaybackControls = () => {
-	const navigate = useNavigate();
-	const { currentSong, isPlaying, togglePlay, playNext, playPrevious, autoPlayNext, toggleAutoPlay, isShuffled, toggleShuffle, isRepeating, toggleRepeat } = usePlayerStore();
-	const { isOffline } = useMusicStore();
+  const navigate = useNavigate();
 
-	const [volume, setVolume] = useState(75);
-	const [showMobileVolume, setShowMobileVolume] = useState(false);
-	const [currentTime, setCurrentTime] = useState(0);
-	const [duration, setDuration] = useState(0);
-	const [localImageUrl, setLocalImageUrl] = useState<string | null>(null);
-	const audioRef = useRef<HTMLAudioElement | null>(null);
+  const {
+    currentSong,
+    isPlaying,
+    togglePlay,
+    playNext,
+    playPrevious,
+    autoPlayNext,
+    toggleAutoPlay,
+    isShuffled,
+    toggleShuffle,
+    isRepeating,
+    toggleRepeat,
+  } = usePlayerStore();
 
-	useEffect(() => {
-		let blobUrl: string | null = null;
+  const { isOffline } = useMusicStore();
 
-		const loadLocalImage = async () => {
-			if (currentSong?._id) {
-				const blob = await idbStorage.get(`image-${currentSong._id}`);
-				if (blob) {
-					blobUrl = URL.createObjectURL(blob);
-					setLocalImageUrl(blobUrl);
-				} else {
-					setLocalImageUrl(null);
-				}
-			} else {
-				setLocalImageUrl(null);
-			}
-		};
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
-		loadLocalImage();
+  const [volume, setVolume] = useState(75);
+  const [showMobileVolume, setShowMobileVolume] = useState(false);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const [localImageUrl, setLocalImageUrl] = useState<string | null>(null);
 
-		return () => {
-			if (blobUrl) {
-				URL.revokeObjectURL(blobUrl);
-			}
-		};
-	}, [currentSong?._id]);
+  /* ---------------- Load Cached Image (FIXED) ---------------- */
+  useEffect(() => {
+    let blobUrl: string | null = null;
 
-	useEffect(() => {
-		audioRef.current = document.querySelector("audio");
+    const loadImage = async () => {
+      if (!currentSong?._id) {
+        setLocalImageUrl(null);
+        return;
+      }
 
-		const audio = audioRef.current;
-		if (!audio) return;
+      const blob = await idbStorage.get(`image-${currentSong._id}`);
+      if (blob) {
+        blobUrl = URL.createObjectURL(blob);
+        setLocalImageUrl(blobUrl);
+      } else {
+        setLocalImageUrl(null);
+      }
+    };
 
-		const updateTime = () => setCurrentTime(audio.currentTime);
-		const updateDuration = () => setDuration(audio.duration);
+    loadImage();
 
-		audio.addEventListener("timeupdate", updateTime);
-		audio.addEventListener("loadedmetadata", updateDuration);
+    return () => {
+      if (blobUrl) {
+        URL.revokeObjectURL(blobUrl);
+      }
+    };
+  }, [currentSong?._id]);
 
-		return () => {
-			audio.removeEventListener("timeupdate", updateTime);
-			audio.removeEventListener("loadedmetadata", updateDuration);
-		};
-	}, [currentSong]);
+  /* ---------------- Audio Binding (ROBUST) ---------------- */
+  useEffect(() => {
+    const audio = document.querySelector("audio") as HTMLAudioElement | null;
+    if (!audio) return;
 
-	const handleSeek = (value: number[]) => {
-		if (audioRef.current) {
-			audioRef.current.currentTime = value[0];
-		}
-	};
+    audioRef.current = audio;
+    audio.volume = volume / 100;
 
-	return (
-		<footer className='h-20 sm:h-24 bg-zinc-900 border-t border-zinc-800 px-4 fixed bottom-16 md:bottom-0 left-0 right-0 z-50 mb-5 rounded-3xl overflow-hidden'>
-			<div className='flex justify-between items-center h-full max-w-[1800px] mx-auto gap-4'>
-				{/* currently playing song */}
-				<div className='flex items-center gap-3 min-w-0 flex-1 sm:flex-none sm:min-w-[180px] sm:w-[30%]'>
-					{currentSong && (
-						<div 
-							onClick={() => navigate(`/song/${currentSong._id}`)} 
-							className='flex items-center gap-3 min-w-0 group hover:opacity-80 transition-opacity cursor-pointer'
-						>
-							<img
-								src={localImageUrl || currentSong.imageUrl}
-								alt={currentSong.title}
-								className='w-10 h-10 sm:w-14 sm:h-14 object-cover rounded-md flex-shrink-0 shadow-lg'
-							/>
-							<div className='min-w-0 overflow-hidden'>
-								<div className='font-medium truncate text-sm sm:text-base group-hover:underline'>
-									{currentSong.title}
-								</div>
-								<div className='text-xs sm:text-sm text-zinc-400 truncate group-hover:text-zinc-300'>
-									{currentSong.artist}
-								</div>
-							</div>
-						</div>
-					)}
-				</div>
+    const onTime = () => {
+      if (!isNaN(audio.currentTime)) {
+        setCurrentTime(audio.currentTime);
+      }
+    };
 
-				{/* player controls*/}
-				<div className='flex flex-col items-center gap-1 sm:gap-2 flex-none sm:flex-1 sm:max-w-[45%] '>
-					<div className='flex items-center gap-3 sm:gap-6'>
-						<Button
-							size='icon'
-							variant='ghost'
-							className={cn(
-								"hidden md:inline-flex hover:text-white transition-colors",
-								isShuffled ? "text-emerald-500" : "text-zinc-400"
-							)}
-							onClick={toggleShuffle}
-							title={isShuffled ? 'Shuffle: ON' : 'Shuffle: OFF'}
-						>
-							<Shuffle className='h-4 w-4' />
-						</Button>
+    const onMeta = () => {
+      if (!isNaN(audio.duration) && audio.duration > 0) {
+        setDuration(audio.duration);
+      }
+    };
 
-						<Button
-							size='icon'
-							variant='ghost'
-							className='hover:text-white text-zinc-400 h-8 w-8'
-							onClick={playPrevious}
-							disabled={!currentSong}
-						>
-							<SkipBack className='h-4 w-4' />
-						</Button>
+    audio.addEventListener("timeupdate", onTime);
+    audio.addEventListener("loadedmetadata", onMeta);
 
-						<Button
-							size='icon'
-							className='bg-white hover:bg-white/80 text-black rounded-full h-8 w-8 sm:h-10 sm:w-10'
-							onClick={togglePlay}
-							disabled={!currentSong}
-						>
-							{isPlaying ? <Pause className='h-5 w-5' /> : <Play className='h-5 w-5' />}
-						</Button>
-						<Button
-							size='icon'
-							variant='ghost'
-							className='hover:text-white text-zinc-400 h-8 w-8'
-							onClick={playNext}
-							disabled={!currentSong}
-						>
-							<SkipForward className='h-4 w-4' />
-						</Button>
+    return () => {
+      audio.removeEventListener("timeupdate", onTime);
+      audio.removeEventListener("loadedmetadata", onMeta);
+    };
+  }, [currentSong]);
 
-						<Button
-							size='icon'
-							variant='ghost'
-							onClick={toggleRepeat}
-							className={cn(
-								"hover:text-white transition-colors h-8 w-8",
-								isRepeating ? "text-emerald-500" : "text-zinc-400"
-							)}
-							title={isRepeating ? 'Repeat: ON' : 'Repeat: OFF'}
-						>
-							<Repeat className='h-4 w-4' />
-						</Button>
-						<Button
-							size='icon'
-							variant='ghost'
-							onClick={toggleAutoPlay}
-							className={cn(
-								"hover:text-white transition-colors h-8 w-8",
-								autoPlayNext ? "text-emerald-500" : "text-zinc-400"
-							)}
-							title={autoPlayNext ? 'Auto-play: ON' : 'Auto-play: OFF'}
-						>
-							<ListMusic className='h-4 w-4' />
-						</Button>
+  /* ---------------- Volume Sync ---------------- */
+  useEffect(() => {
+    if (audioRef.current) {
+      audioRef.current.volume = Math.min(1, Math.max(0, volume / 100));
+    }
+  }, [volume]);
 
-						<div className="relative md:hidden">
-							<Button
-								size='icon'
-								variant='ghost'
-								className={cn(
-									"hover:text-white text-zinc-400 h-8 w-8",
-									showMobileVolume && "text-white bg-zinc-800"
-								)}
-								onClick={() => setShowMobileVolume(!showMobileVolume)}
-							>
-								<Volume1 className='h-4 w-4' />
-							</Button>
+  /* ---------------- Seek (FIXED) ---------------- */
+  const handleSeek = (value: number[]) => {
+    if (!audioRef.current || duration <= 0) return;
 
-							{showMobileVolume && (
-								<div className='absolute bottom-full right-0 mb-4 bg-zinc-800 p-3 rounded-lg shadow-xl border border-zinc-700 w-32 animate-in fade-in slide-in-from-bottom-2'>
-									<Slider
-										value={[volume]}
-										max={100}
-										step={1}
-										className='w-full cursor-pointer'
-										onValueChange={(value) => {
-											setVolume(value[0]);
-											if (audioRef.current) {
-												audioRef.current.volume = value[0] / 100;
-											}
-										}}
-									/>
-								</div>
-							)}
-						</div>
-					</div>
+    const seekTo = value[0];
+    if (isNaN(seekTo)) return;
 
-					<div className='flex items-center gap-2 w-full'>
-						<div className='text-[10px] sm:text-xs text-zinc-400 w-10 text-right'>{formatTime(currentTime)}</div>
-						<Slider
-							value={[currentTime]}
-							max={duration || 100}
-							step={1}
-							className='w-full hover:cursor-grab active:cursor-grabbing'
-							onValueChange={handleSeek}
-						/>
-						<div className='text-[10px] sm:text-xs text-zinc-400 w-10'>{formatTime(duration)}</div>
-					</div>
-				</div>
-				{/* volume controls */}
-				<div className='hidden md:flex items-center gap-4 min-w-[180px] w-[30%] justify-end'>
-					<Button size='icon' variant='ghost' className='hover:text-white text-zinc-400'>
-						<Mic2 className='h-4 w-4' />
-					</Button>
-					<Button size='icon' variant='ghost' className='hover:text-white text-zinc-400'>
-						<ListMusic className='h-4 w-4' />
-					</Button>
-					<Button size='icon' variant='ghost' className='hover:text-white text-zinc-400'>
-						<Laptop2 className='h-4 w-4' />
-					</Button>
+    audioRef.current.currentTime = seekTo;
+    setCurrentTime(seekTo); // immediate UI feedback
+  };
 
-					<div className='flex items-center gap-2'>
-						{isOffline && (
-							<div className="flex items-center gap-1.5 px-2 py-1 rounded bg-red-500/10 text-red-500 text-[10px] font-bold uppercase tracking-wider animate-pulse">
-								<WifiOff className="size-3" />
-								Offline
-							</div>
-						)}
-						<Button size='icon' variant='ghost' className='hover:text-white text-zinc-400'>
-							<Volume1 className='h-4 w-4' />
-						</Button>
+  const seekDisabled = !currentSong || duration <= 0;
 
-						<Slider
-							value={[volume]}
-							max={100}
-							step={1}
-							className='w-24 hover:cursor-grab active:cursor-grabbing'
-							onValueChange={(value) => {
-								setVolume(value[0]);
-								if (audioRef.current) {
-									audioRef.current.volume = value[0] / 100;
-								}
-							}}
-						/>
-					</div>
-				</div>
-			</div>
-		</footer>
-	);
+  /* ---------------- UI ---------------- */
+  return (
+    <footer className="fixed bottom-16 md:bottom-0 left-0 right-0 z-50 bg-zinc-900 border-t border-zinc-800 rounded-3xl px-4 h-20 sm:h-24">
+      <div className="flex justify-between items-center h-full max-w-[1800px] mx-auto gap-4">
+
+        {/* -------- Song Info -------- */}
+        <div className="flex items-center gap-3 min-w-0 w-[30%]">
+          {currentSong && (
+            <div
+              onClick={() => navigate(`/song/${currentSong._id}`)}
+              className="flex items-center gap-3 cursor-pointer hover:opacity-80"
+            >
+              <img
+                src={localImageUrl || currentSong.imageUrl}
+                alt={currentSong.title}
+                className="w-12 h-12 rounded-md object-cover"
+              />
+              <div className="min-w-0">
+                <p className="truncate font-medium">{currentSong.title}</p>
+                <p className="truncate text-sm text-zinc-400">
+                  {currentSong.artist}
+                </p>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* -------- Player Controls -------- */}
+        <div className="flex flex-col items-center gap-2 w-full sm:max-w-[45%]">
+
+          <div className="flex items-center gap-3">
+            <Button size="icon" variant="ghost" onClick={toggleShuffle}
+              className={cn(isShuffled && "text-emerald-500")}>
+              <Shuffle className="h-4 w-4" />
+            </Button>
+
+            <Button size="icon" variant="ghost" onClick={playPrevious}>
+              <SkipBack className="h-4 w-4" />
+            </Button>
+
+            <Button
+              size="icon"
+              className="bg-white text-black rounded-full h-9 w-9"
+              onClick={togglePlay}
+              disabled={!currentSong}
+            >
+              {isPlaying ? <Pause /> : <Play />}
+            </Button>
+
+            <Button size="icon" variant="ghost" onClick={playNext}>
+              <SkipForward className="h-4 w-4" />
+            </Button>
+
+            <Button size="icon" variant="ghost" onClick={toggleRepeat}
+              className={cn(isRepeating && "text-emerald-500")}>
+              <Repeat className="h-4 w-4" />
+            </Button>
+
+            <Button size="icon" variant="ghost" onClick={toggleAutoPlay}
+              className={cn(autoPlayNext && "text-emerald-500")}>
+              <ListMusic className="h-4 w-4" />
+            </Button>
+
+            {/* -------- Mobile Volume -------- */}
+            <div className="relative md:hidden">
+              <Button size="icon" variant="ghost"
+                onClick={() => setShowMobileVolume(p => !p)}>
+                <Volume1 className="h-4 w-4" />
+              </Button>
+
+              {showMobileVolume && (
+                <div className="absolute bottom-10 right-0 z-50 h-28 w-10 bg-zinc-900 border border-zinc-700 rounded-xl flex items-center justify-center">
+                  <Slider
+                    orientation="vertical"
+                    value={[volume]}
+                    max={100}
+                    step={1}
+                    onValueChange={(v) => setVolume(v[0])}
+                    className="h-20 [&_[role=slider]]:bg-emerald-500"
+                  />
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* -------- Seek Bar (INTUITIVE) -------- */}
+          <div className="flex items-center gap-2 w-full">
+            <span className="text-xs text-zinc-400 w-10 text-right">
+              {formatTime(currentTime)}
+            </span>
+
+            <Slider
+              value={[currentTime]}
+              max={duration || 1}
+              step={0.1}
+              disabled={seekDisabled}
+              onValueChange={handleSeek}
+              className={cn(
+                "w-full",
+                seekDisabled && "opacity-40 cursor-not-allowed"
+              )}
+            />
+
+            <span className="text-xs text-zinc-400 w-10">
+              {formatTime(duration)}
+            </span>
+          </div>
+        </div>
+
+        {/* -------- Desktop Volume -------- */}
+        <div className="hidden md:flex items-center gap-2 w-[30%] justify-end">
+          <Button size="icon" variant="ghost"><Mic2 /></Button>
+          <Button size="icon" variant="ghost"><ListMusic /></Button>
+          <Button size="icon" variant="ghost"><Laptop2 /></Button>
+
+          {isOffline && (
+            <div className="flex items-center gap-1 text-red-500 text-xs font-bold">
+              <WifiOff className="h-3 w-3" /> Offline
+            </div>
+          )}
+
+          <Button size="icon" variant="ghost"><Volume1 /></Button>
+          <Slider
+            value={[volume]}
+            max={100}
+            step={1}
+            onValueChange={(v) => setVolume(v[0])}
+            className="w-24"
+          />
+        </div>
+      </div>
+    </footer>
+  );
 };
